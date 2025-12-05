@@ -1,7 +1,7 @@
 {
 	"id": "note-maker-ai",
 	"name": "NoteMakerAI",
-	"version": "0.1.09",
+	"version": "0.1.10",
 	"minAppVersion": "0.15.0",
 	"description": "Obsidian plugin to create notes for bases.",
 	"author": "Richard Parks",

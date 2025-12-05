@@ -38,7 +38,7 @@ export class NoteMakerAISettingTab extends PluginSettingTab {
 	display(): void {
 		const { containerEl } = this;
 		containerEl.empty();
-		containerEl.createEl("h2", { text: "NoteTakerAI Settings" });
+		containerEl.createEl("h3", { text: "NoteTakerAI Settings" });
 
 		// VERSION (read-only)
 		new Setting(containerEl)
@@ -50,7 +50,7 @@ export class NoteMakerAISettingTab extends PluginSettingTab {
 		
 		new Setting(containerEl)
 			.setName("Notes Folder")
-			.setDesc("Where to save new book notes.")
+			.setDesc("Where to save new notes.")
 			.addText((text) => {
 				text.setPlaceholder("e.g. Bases/Books")
 					.setValue(this.plugin.settings.folders.notes)
@@ -66,7 +66,7 @@ export class NoteMakerAISettingTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName("Photos Folder")
-			.setDesc("Where to save/move book cover images.")
+			.setDesc("Where to save/move images.")
 			.addText((text) => {
 				text.setPlaceholder("e.g. Bases/Books/photos")
 					.setValue(this.plugin.settings.folders.photos)
@@ -89,12 +89,12 @@ export class NoteMakerAISettingTab extends PluginSettingTab {
 		};
 
 		containerEl.createEl("h3", { text: "LLMs" });
+		containerEl.createEl("hr");
 		const llmWrap = containerEl.createEl("div", {
 			cls: "notetakerai-llm-rows",
 		});
 
 		let defaultLlmSelectEl: HTMLSelectElement | null = null;
-		let folderLlmSelectEl: HTMLSelectElement | null = null;
 
 		const refreshLlmDependentSelects = async () => {
 			const llms = ensureLlmArray();
@@ -126,30 +126,6 @@ export class NoteMakerAISettingTab extends PluginSettingTab {
 				defaultLlmSelectEl.value = this.plugin.settings.defaultLlmLabel || labels[0] || "";
 			}
 			
-			if (folderLlmSelectEl) {
-				while (folderLlmSelectEl.firstChild) {
-					folderLlmSelectEl.removeChild(folderLlmSelectEl.firstChild);
-				}
-				folderLlmSelectEl.createEl("option", { text: "Use Default", value: "" });
-
-				llms.forEach((entry) => {
-					const opt = folderLlmSelectEl!.createEl("option", {
-						text: entry.label,
-					});
-					opt.value = entry.label;
-				});
-
-				const current = this.plugin.settings.folders.llmLabel;
-				if (current && labels.includes(current)) {
-					folderLlmSelectEl.value = current;
-				} else {
-					folderLlmSelectEl.value = "";
-					if (current) { // It was set but no longer exists
-						this.plugin.settings.folders.llmLabel = undefined;
-						needsSave = true;
-					}
-				}
-			}
 
 			if (needsSave) {
 				await this.plugin.saveSettings();
@@ -318,10 +294,11 @@ export class NoteMakerAISettingTab extends PluginSettingTab {
 						return;
 					}
 					const value = modelSelect.value;
-					if (entry.model === value) return;
-					entry.model = value;
 					customModelInput.style.display = "none";
 					customModelInput.value = "";
+
+					if (entry.model === value) return;
+					entry.model = value;
 					await this.plugin.saveSettings();
 				};
 
@@ -383,6 +360,7 @@ export class NoteMakerAISettingTab extends PluginSettingTab {
 		addLlmWrap.style.display = "flex";
 		addLlmWrap.style.justifyContent = "flex-end";
 		addLlmWrap.style.marginTop = "8px";
+		addLlmWrap.style.marginBottom = "18px";
 		const addLlmBtn = addLlmWrap.createEl("button", {
 			text: "Add LLM",
 		});
@@ -421,16 +399,6 @@ export class NoteMakerAISettingTab extends PluginSettingTab {
 			});
 		});
 
-		new Setting(containerEl)
-			.setName("Override LLM for Books")
-			.setDesc("Use a specific LLM just for this subject (optional).")
-			.addDropdown((dd) => {
-				folderLlmSelectEl = dd.selectEl;
-				dd.onChange(async (value) => {
-					this.plugin.settings.folders.llmLabel = value || undefined;
-					await this.plugin.saveSettings();
-				});
-			});
 
 		void refreshLlmDependentSelects();
 
@@ -460,6 +428,7 @@ export class NoteMakerAISettingTab extends PluginSettingTab {
 
 		// NARRATIVE STYLE SETTINGS
 		containerEl.createEl("h3", { text: "Narrative Style" });
+		containerEl.createEl("hr");
 		const toneWrap = containerEl.createEl("div", {
 			cls: "notetakerai-tone-rows",
 		});
@@ -623,9 +592,9 @@ export class NoteMakerAISettingTab extends PluginSettingTab {
 			refreshNarrativeStyleSelects();
 		};
 		
-		containerEl.createEl("h4", { text: "Default Narrative Style for Books" });
+		containerEl.createEl("h4", { text: "Default Narrative Style" });
 		new Setting(containerEl)
-			.setDesc("Apply this style automatically to generated book summaries.")
+			.setDesc("Apply this style automatically to generated summaries.")
 			.addDropdown(dd => {
 				folderStyleSelectEl = dd.selectEl;
 				dd.onChange(async (v) => {
@@ -643,7 +612,7 @@ export class NoteMakerAISettingTab extends PluginSettingTab {
 		new Setting(containerEl)
 			.setName("Warn on subject mismatch")
 			.setDesc(
-				"Show a warning if the AI predicts the image is not a book."
+				"Show a warning if the AI predicts the image is not the subject."
 			)
 			.addToggle((t) =>
 				t
@@ -658,7 +627,7 @@ export class NoteMakerAISettingTab extends PluginSettingTab {
 		new Setting(containerEl)
 			.setName("Mismatch confidence threshold")
 			.setDesc(
-				"Warn only if the AI is this confident that it is NOT a book (0.0–1.0)."
+				"Warn only if the AI is this confident that it is NOT the subject."
 			)
 			.addText((t) =>
 				t
