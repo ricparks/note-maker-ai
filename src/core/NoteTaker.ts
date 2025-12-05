@@ -1,9 +1,9 @@
 /**
- * BaseMaker orchestrates the end-to-end workflow of turning the currently active
+ * NoteTakerAI orchestrates the end-to-end workflow of turning the currently active
  * image file into a structured subject note. It is the glue layer that sequences:
  *  1. Active file acquisition & basic validation (image type checks).
  *  2. Binary -> base64 conversion (delegated to utils).
- *  3. Subject selection (currently a single wine subject implementation).
+ *  3. Subject selection (currently a single book subject implementation).
  *  4. AI vendor invocation (delegated to ai/ clients returning AiResult).
  *  5. Subject JSON validation & parsing (delegated to the SubjectDefinition).
  *  6. Note creation & duplicate guarding inside the vault.
@@ -80,7 +80,7 @@ const SECTION_HEADING_ALIASES: Record<string, string[]> = {
 	pa: ["prompt additions"],
 };
 
-export class BaseMaker {
+export class NoteTaker {
 	private redoContext: RedoContext | null = null;
 
 	constructor(private plugin: NoteTakerAI) {}
@@ -190,16 +190,14 @@ export class BaseMaker {
 			console.log(parsed);
 
 			// Surface non-blocking warnings for parsed data
-			try {
-				if (
-					(this.subject as any).id === "books" &&
-					(parsed.fields as any)?.isbnInvalid
-				) {
-					progressModal.error(
-						"Warning: The detected ISBN appears invalid and was omitted."
-					);
+			if (typeof (this.subject as any).validateParsedData === "function") {
+				const warnings = (this.subject as any).validateParsedData(parsed);
+				if (Array.isArray(warnings)) {
+					for (const w of warnings) {
+						progressModal.error(w);
+					}
 				}
-			} catch {}
+			}
 
 
 			// Validation Guardrail
@@ -313,7 +311,7 @@ export class BaseMaker {
 			typeof (this.subject as any).getPrompt === "function"
 				? (this.subject as any).getPrompt(promptContext)
 				: this.subject.prompt;
-		console.log("[BaseMaker] Redo prompt:", prompt);
+		console.log("[NoteTaker] Redo prompt:", prompt);
 		const photoFile = this.resolveRedoPhoto(noteData, file, content);
 		if (!photoFile) {
 			progressModal.error(
@@ -373,7 +371,7 @@ export class BaseMaker {
 			progressModal.done(false);
 			return;
 		}
-		console.log("[BaseMaker] Redo raw subject:", raw);
+		console.log("[NoteTaker] Redo raw subject:", raw);
 		this.redoContext.rawSubject = raw;
 		progressModal.info("Fetched redo subject data");
 
@@ -618,7 +616,7 @@ export class BaseMaker {
 			.replace(/[\\/:?*"<>|]/g, " ")
 			.replace(/\s+/g, " ")
 			.trim();
-		return raw.length > 0 ? raw : "BaseMaker Note";
+		return raw.length > 0 ? raw : "NoteTaker Note";
 	}
 
 	private async renameRedoFileIfNeeded(
@@ -902,7 +900,7 @@ export class BaseMaker {
 		}
 
 		console.log(
-			`[BaseMaker] Fetching subject JSON (redo=${isRedo}). Prompt length: ${prompt.length}`
+			`[NoteTaker] Fetching subject JSON (redo=${isRedo}). Prompt length: ${prompt.length}`
 		);
 
 		const llmConfig = this.resolveLlmConfig(llmLabelOverride);

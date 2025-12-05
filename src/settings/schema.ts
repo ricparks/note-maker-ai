@@ -35,30 +35,6 @@ export interface ImageSettings {
   keepOriginalAfterResize: boolean;
 }
 
-/** Legacy V2 settings for migration reference */
-export interface BaseMakerSettingsV2 {
-  version: 2;
-  llms: LlmConfigEntry[];
-  defaultLlmLabel?: string;
-  subject: {
-      id: string;
-      authorFormatLastFirst: boolean;
-      warnOnMismatch?: boolean;
-      mismatchThreshold?: number;
-  };
-  experimental: ExperimentalSettings;
-  formatting: {};
-  image: ImageSettings;
-  subjectFolders?: Array<{
-      subjectId: string;
-      notesFolder: string;
-      photosFolder: string;
-      llmLabel?: string;
-      narrativeStyleLabel?: string;
-  }>;
-  narrativeStyles?: NarrativeStyleEntry[];
-}
-
 export interface ValidationSettings {
   /** If true, warns when the AI predicts a category other than 'book' (e.g. wine, travel). */
   warnOnMismatch: boolean;
@@ -66,7 +42,7 @@ export interface ValidationSettings {
   mismatchThreshold: number;
 }
 
-export interface BaseMakerSettingsV3 {
+export interface NoteTakerSettings {
   version: 3;
   llms: LlmConfigEntry[];
   defaultLlmLabel?: string;
@@ -79,8 +55,6 @@ export interface BaseMakerSettingsV3 {
   narrativeStyles?: NarrativeStyleEntry[];
 }
 
-export type BaseMakerSettings = BaseMakerSettingsV3;
-
 // Narrative Style settings entries
 export interface NarrativeStyleEntry {
   /** Unique label for narrative style (alphanumeric, max 8 chars). */
@@ -91,7 +65,7 @@ export interface NarrativeStyleEntry {
 
 export const DEFAULT_LLM_LABEL = 'default';
 
-export const DEFAULT_SETTINGS: BaseMakerSettings = {
+export const DEFAULT_SETTINGS: NoteTakerSettings = {
   version: CURRENT_SETTINGS_VERSION,
   llms: [
     {

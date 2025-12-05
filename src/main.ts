@@ -1,16 +1,16 @@
 import { Plugin, setIcon } from 'obsidian';
-import { BaseMakerSettingTab } from './ui/settings/SettingTab';
+import { NoteTakerSettingTab } from './ui/settings/NoteTakerSettingTab';
 import { SettingsManager } from './settings/SettingsManager';
-import type { BaseMakerSettings } from './settings/schema';
+import type { NoteTakerSettings } from './settings/schema';
 import { RIBBON_ICON, RIBBON_TITLE } from './utils/constants';
 import { activeSubject } from './core/subject';
-import { BaseMaker } from './core/BaseMaker';
+import { NoteTaker } from './core/NoteTaker';
 
-// Main plugin class kept minimal; business logic lives in BaseMaker (core/BaseMaker.ts)
+// Main plugin class kept minimal; business logic lives in NoteTaker (core/NoteTaker.ts)
 export default class NoteTakerAI extends Plugin {
-    settings!: BaseMakerSettings; // provided by manager after load
+    settings!: NoteTakerSettings; // provided by manager after load
     settingsManager!: SettingsManager;
-    core!: BaseMaker;
+    core!: NoteTaker;
     private ribbonEl?: HTMLElement;
 
     // This function runs when your plugin is loaded
@@ -18,8 +18,8 @@ export default class NoteTakerAI extends Plugin {
         this.settingsManager = new SettingsManager(this);
         await this.settingsManager.load();
         this.settings = this.settingsManager.data;
-        this.core = new BaseMaker(this);
-        this.addSettingTab(new BaseMakerSettingTab(this.app, this));
+        this.core = new NoteTaker(this);
+        this.addSettingTab(new NoteTakerSettingTab(this.app, this));
         this.renderRibbon();
     }
 

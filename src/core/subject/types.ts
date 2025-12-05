@@ -61,4 +61,6 @@ export interface SubjectDefinition<T extends SubjectInfoBase = SubjectInfoBase> 
   ribbonTitle?: string;
   /** Optional hook used during redo to parse an existing markdown note. */
   parseExistingNote?(note: SubjectExistingNoteContext): SubjectNoteData | Promise<SubjectNoteData>;
+  /** Optional hook to validate parsed data and return a list of warning messages. */
+  validateParsedData?(info: T): string[];
 }

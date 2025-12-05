@@ -12,16 +12,6 @@ export const NOT_IMAGE_NOTICE = "The active file is not a JPG or PNG image.";
 export const SUCCESS_FETCHED_SUBJECT = "Successfully fetched subject data!";
 export const FAILED_GET_SUBJECT = "Failed to get subject data from AI.";
 
-/**
- * @deprecated Legacy wine-specific alias. Prefer SUCCESS_FETCHED_SUBJECT.
- * Retained for backward compatibility until a major version bump.
- */
-export const SUCCESS_FETCHED_WINE = SUCCESS_FETCHED_SUBJECT;
-/**
- * @deprecated Legacy wine-specific alias. Prefer FAILED_GET_SUBJECT.
- * Retained for backward compatibility until a major version bump.
- */
-export const FAILED_GET_WINE = FAILED_GET_SUBJECT;
 
 export const COULD_NOT_CREATE_NOTE = "Error: Could not create the new note.";
 export const UNKNOWN_VENDOR_ERROR = "Error: Unknown LLM vendor selected.";
@@ -40,22 +30,3 @@ export const NOTE_CREATED_NOTICE = (fileName: string) => `Successfully created n
 // Other
 export const IMAGE_EXTENSIONS = ["jpg", "png"];
 
-// --- Book subject literals ---
-/** Stable identifier for the Books subject definition. */
-export const BOOK_SUBJECT_ID = 'books';
-/** Default directory for Book notes inside the vault. */
-export const BOOK_SUBJECT_DIR = 'Bases/Books';
-/** Default fallback display name for author. */
-export const BOOK_UNKNOWN_AUTHOR = 'Unknown Author';
-/** Default fallback display title for book notes. */
-export const BOOK_UNTITLED = 'Untitled Book';
-/** Photo filename fallbacks and limits. */
-export const BOOK_PHOTO_AUTHOR_UNKNOWN = 'unknown';
-export const BOOK_PHOTO_TITLE_DEFAULT = 'untitled';
-export const BOOK_PHOTO_MAX_TITLE_SLUG = 60;
-export const BOOK_PHOTO_FALLBACK_BASENAME = 'image';
-/** Section heading labels used in book notes. */
-export const BOOK_SECTION_MY_NOTES = 'My Notes';
-export const BOOK_SECTION_SUMMARY = 'Summary';
-export const BOOK_SECTION_THEMES = 'Themes';
-export const BOOK_SECTION_NOTES = 'Notes';

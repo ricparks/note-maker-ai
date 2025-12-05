@@ -5,14 +5,12 @@ import type { LlmVendor } from "../../settings/schema";
 import { FolderSuggest } from "../components/FolderSuggest";
 
 const OPENAI_MODEL_OPTIONS: Array<{ value: string; label: string }> = [
-	{ value: "gpt-4o", label: "GPT-4o" },
-	{ value: "gpt-4o-mini", label: "GPT-4o Mini" },
-	{ value: "gpt-5", label: "GPT-5" },
+	{ value: "gpt-5.1", label: "GPT-5.1" },
 	{ value: "gpt-5-mini", label: "GPT-5 Mini" },
 ];
 
 const GEMINI_MODEL_OPTIONS: Array<{ value: string; label: string }> = [
-	{ value: "gemini-2.5-pro", label: "Gemini 2.5 Pro" },
+	{ value: "gemini-3-pro-preview", label: "Gemini 3 Pro" },
 	{ value: "gemini-2.5-flash", label: "Gemini 2.5 Flash" },
 ];
 
@@ -30,7 +28,7 @@ const MODEL_OPTION_MAP: Record<LlmVendor, Array<{ value: string; label: string }
 	openrouter: OPENROUTER_MODEL_OPTIONS,
 };
 
-export class BaseMakerSettingTab extends PluginSettingTab {
+export class NoteTakerSettingTab extends PluginSettingTab {
 	plugin: NoteTakerAI;
 	constructor(app: App, plugin: NoteTakerAI) {
 		super(app, plugin);
@@ -40,7 +38,7 @@ export class BaseMakerSettingTab extends PluginSettingTab {
 	display(): void {
 		const { containerEl } = this;
 		containerEl.empty();
-		containerEl.createEl("h2", { text: "BaseMaker Settings" });
+		containerEl.createEl("h2", { text: "NoteTakerAI Settings" });
 
 		// VERSION (read-only)
 		new Setting(containerEl)
