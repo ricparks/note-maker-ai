@@ -42,19 +42,6 @@ export interface ValidationSettings {
   mismatchThreshold: number;
 }
 
-export interface NoteTakerSettings {
-  version: 3;
-  llms: LlmConfigEntry[];
-  defaultLlmLabel?: string;
-  folders: FolderSettings;
-  subject: SubjectSettings;
-  validation: ValidationSettings;
-  experimental: ExperimentalSettings;
-  formatting: {};
-  image: ImageSettings;
-  narrativeStyles?: NarrativeStyleEntry[];
-}
-
 // Narrative Style settings entries
 export interface NarrativeStyleEntry {
   /** Unique label for narrative style (alphanumeric, max 8 chars). */
@@ -63,37 +50,50 @@ export interface NarrativeStyleEntry {
   narrativeStyle: string;
 }
 
+// ------------------------------------------------------------------
+// Settings V3 (Latest)
+// ------------------------------------------------------------------
+export interface NoteTakerAISettings {
+  llms: LlmConfigEntry[];
+  defaultLlmLabel?: string;
+
+  folders: {
+    notes: string;
+    photos: string;
+    llmLabel?: string;
+    narrativeStyleLabel?: string;
+  };
+
+  /** Global "Keep original after resize" setting. */
+  image?: ImageSettings;
+  /** Custom narrative styles. */
+  narrativeStyles?: NarrativeStyleEntry[];
+  /** Validation guardrails. */
+  validation: ValidationSettings;
+}
+
 export const DEFAULT_LLM_LABEL = 'default';
 
-export const DEFAULT_SETTINGS: NoteTakerSettings = {
-  version: CURRENT_SETTINGS_VERSION,
+export const DEFAULT_SETTINGS: NoteTakerAISettings = {
   llms: [
     {
-      label: DEFAULT_LLM_LABEL,
-      vendor: 'gemini',
-      model: 'gemini-2.5-flash',
-      apiKey: (process.env.GEMINI_API_KEY as string) || ''
-    }
+      label: "gemini-flash",
+      vendor: "gemini",
+      model: "gemini-1.5-flash",
+      apiKey: process.env.GEMINI_API_KEY || "",
+    },
   ],
-  defaultLlmLabel: DEFAULT_LLM_LABEL,
+  defaultLlmLabel: "gemini-flash",
   folders: {
-      notes: 'Bases/Books',
-      photos: 'Bases/Books/photos'
-  },
-  subject: {
-    authorFormatLastFirst: true,
-  },
-  validation: {
-    warnOnMismatch: true,
-    mismatchThreshold: 0.7
-  },
-  experimental: {
-    enableDebugLogging: false
-  },
-  formatting: {
+    notes: "Bases/Books",
+    photos: "Bases/Books/photos",
   },
   image: {
-    keepOriginalAfterResize: false
+    keepOriginalAfterResize: false,
   },
-  narrativeStyles: []
+  narrativeStyles: [],
+  validation: {
+    warnOnMismatch: true,
+    mismatchThreshold: 0.7,
+  }
 };

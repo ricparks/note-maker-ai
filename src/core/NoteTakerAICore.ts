@@ -80,7 +80,7 @@ const SECTION_HEADING_ALIASES: Record<string, string[]> = {
 	pa: ["prompt additions"],
 };
 
-export class NoteTaker {
+export class NoteTakerAICore {
 	private redoContext: RedoContext | null = null;
 
 	constructor(private plugin: NoteTakerAI) {}
@@ -311,7 +311,7 @@ export class NoteTaker {
 			typeof (this.subject as any).getPrompt === "function"
 				? (this.subject as any).getPrompt(promptContext)
 				: this.subject.prompt;
-		console.log("[NoteTaker] Redo prompt:", prompt);
+		console.log("[NoteTakerAI] Redo prompt:", prompt);
 		const photoFile = this.resolveRedoPhoto(noteData, file, content);
 		if (!photoFile) {
 			progressModal.error(
@@ -371,7 +371,7 @@ export class NoteTaker {
 			progressModal.done(false);
 			return;
 		}
-		console.log("[NoteTaker] Redo raw subject:", raw);
+		console.log("[NoteTakerAI] Redo raw subject:", raw);
 		this.redoContext.rawSubject = raw;
 		progressModal.info("Fetched redo subject data");
 
@@ -616,7 +616,7 @@ export class NoteTaker {
 			.replace(/[\\/:?*"<>|]/g, " ")
 			.replace(/\s+/g, " ")
 			.trim();
-		return raw.length > 0 ? raw : "NoteTaker Note";
+		return raw.length > 0 ? raw : "NoteTakerAI Note";
 	}
 
 	private async renameRedoFileIfNeeded(
@@ -900,7 +900,7 @@ export class NoteTaker {
 		}
 
 		console.log(
-			`[NoteTaker] Fetching subject JSON (redo=${isRedo}). Prompt length: ${prompt.length}`
+			`[NoteTakerAI] Fetching subject JSON (redo=${isRedo}). Prompt length: ${prompt.length}`
 		);
 
 		const llmConfig = this.resolveLlmConfig(llmLabelOverride);
@@ -922,7 +922,7 @@ export class NoteTaker {
 			return null;
 		}
 
-		console.log(`[BaseMaker] Using LLM: ${vendor} / ${model} (${llmLabel})`);
+		console.log(`[NoteTakerAI] Using LLM: ${vendor} / ${model} (${llmLabel})`);
 
 		let result: AiResult;
 		if (vendor === "openai") {

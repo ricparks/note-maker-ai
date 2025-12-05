@@ -28,7 +28,7 @@ const MODEL_OPTION_MAP: Record<LlmVendor, Array<{ value: string; label: string }
 	openrouter: OPENROUTER_MODEL_OPTIONS,
 };
 
-export class NoteTakerSettingTab extends PluginSettingTab {
+export class NoteTakerAISettingTab extends PluginSettingTab {
 	plugin: NoteTakerAI;
 	constructor(app: App, plugin: NoteTakerAI) {
 		super(app, plugin);
@@ -90,7 +90,7 @@ export class NoteTakerSettingTab extends PluginSettingTab {
 
 		containerEl.createEl("h3", { text: "LLMs" });
 		const llmWrap = containerEl.createEl("div", {
-			cls: "basemaker-llm-rows",
+			cls: "notetakerai-llm-rows",
 		});
 
 		let defaultLlmSelectEl: HTMLSelectElement | null = null;
@@ -351,8 +351,8 @@ export class NoteTakerSettingTab extends PluginSettingTab {
 				};
 
 				const delBtn = row.createEl("button", { text: "×" });
-				delBtn.addClass("basemaker-btn-ghost-danger");
-				delBtn.addClass("basemaker-icon-btn");
+				delBtn.addClass("notetakerai-btn-ghost-danger");
+				delBtn.addClass("notetakerai-icon-btn");
 				delBtn.style.marginLeft = "auto";
 				delBtn.setAttr("aria-label", "Remove LLM");
 				delBtn.title = "Remove LLM";
@@ -447,12 +447,13 @@ export class NoteTakerSettingTab extends PluginSettingTab {
 						!!this.plugin.settings.image?.keepOriginalAfterResize
 					)
 					.onChange(async (val) => {
-						if (!this.plugin.settings.image)
+						if (!this.plugin.settings.image) {
 							this.plugin.settings.image = {
 								keepOriginalAfterResize: val,
-							} as any;
-						this.plugin.settings.image.keepOriginalAfterResize =
-							val;
+							};
+						} else {
+							this.plugin.settings.image.keepOriginalAfterResize = val;
+						}
 						await this.plugin.saveSettings();
 					})
 			);
@@ -460,7 +461,7 @@ export class NoteTakerSettingTab extends PluginSettingTab {
 		// NARRATIVE STYLE SETTINGS
 		containerEl.createEl("h3", { text: "Narrative Style" });
 		const toneWrap = containerEl.createEl("div", {
-			cls: "basemaker-tone-rows",
+			cls: "notetakerai-tone-rows",
 		});
 
 		let folderStyleSelectEl: HTMLSelectElement | null = null;
@@ -570,8 +571,8 @@ export class NoteTakerSettingTab extends PluginSettingTab {
 
 				// Delete button (compact ghost "×")
 				const delBtn = row.createEl("button", { text: "×" });
-				delBtn.addClass("basemaker-btn-ghost-danger");
-				delBtn.addClass("basemaker-icon-btn");
+				delBtn.addClass("notetakerai-btn-ghost-danger");
+				delBtn.addClass("notetakerai-icon-btn");
 				// Align delete button to the far right of the row
 				delBtn.style.marginLeft = "auto";
 				delBtn.setAttr("aria-label", "Remove narrative style");

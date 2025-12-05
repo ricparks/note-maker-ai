@@ -1,14 +1,14 @@
 import type NoteTakerAI from '../main';
 import {
-  NoteTakerSettings,
+  NoteTakerAISettings,
   DEFAULT_SETTINGS,
 } from './schema';
 
 export class SettingsManager {
-  private _settings: NoteTakerSettings = DEFAULT_SETTINGS;
+  private _settings: NoteTakerAISettings = DEFAULT_SETTINGS;
   constructor(private plugin: NoteTakerAI) {}
 
-  get data(): NoteTakerSettings { return this._settings; }
+  get data(): NoteTakerAISettings { return this._settings; }
 
   async load() {
     const stored = await this.plugin.loadData();
@@ -20,12 +20,12 @@ export class SettingsManager {
     await this.plugin.saveData(this._settings);
   }
 
-  update<T>(mutator: (draft: NoteTakerSettings) => T): T {
+  update<T>(mutator: (draft: NoteTakerAISettings) => T): T {
     const result = mutator(this._settings);
     return result;
   }
 
-  async updateAndSave<T>(mutator: (draft: NoteTakerSettings) => T): Promise<T> {
+  async updateAndSave<T>(mutator: (draft: NoteTakerAISettings) => T): Promise<T> {
     const res = this.update(mutator);
     await this.save();
     return res;
