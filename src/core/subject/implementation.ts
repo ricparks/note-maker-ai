@@ -4,7 +4,9 @@ import { BOOK_PROMPT } from '../../utils/prompts';
 /** Stable identifier for the Books subject definition. */
 export const BOOK_SUBJECT_ID = 'books';
 /** Default directory for Book notes inside the vault. */
-export const BOOK_SUBJECT_DIR = 'Bases/Books';
+export const SUBJECT_DIR = 'Bases/Books';
+/** Default directory for photos. */
+export const SUBJECT_PHOTOS_DIR = 'Bases/Books/photos';
 /** Default fallback display name for author. */
 export const BOOK_UNKNOWN_AUTHOR = 'Unknown Author';
 /** Default fallback display title for book notes. */
@@ -95,7 +97,7 @@ export interface BookSubjectInfo extends SubjectInfoBase {
 export const bookSubject: SubjectDefinition<BookSubjectInfo> = {
   id: BOOK_SUBJECT_ID,
   prompt: BOOK_PROMPT,
-  directory: BOOK_SUBJECT_DIR,
+  directory: SUBJECT_DIR,
   ribbonIcon: 'book-open',
   ribbonTitle: 'Create book note',
   

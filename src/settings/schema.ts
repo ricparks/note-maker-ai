@@ -1,5 +1,4 @@
-// Versioned settings schema for BaseMaker
-// Central place for type definitions and defaults so other modules depend on a stable contract.
+import { SUBJECT_DIR, SUBJECT_PHOTOS_DIR } from "../core/subject/implementation";
 
 export const CURRENT_SETTINGS_VERSION = 3;
 
@@ -88,8 +87,8 @@ export const DEFAULT_SETTINGS: NoteMakerAISettings = {
   ],
   defaultLlmLabel: "gemini3",
   folders: {
-    notes: "Bases/Books",
-    photos: "Bases/Books/photos",
+    notes: SUBJECT_DIR,
+    photos: SUBJECT_PHOTOS_DIR,
   },
   image: {
     keepOriginalAfterResize: false,

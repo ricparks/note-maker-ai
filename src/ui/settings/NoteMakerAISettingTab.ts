@@ -2,6 +2,7 @@
 import { App, PluginSettingTab, Setting, Notice } from "obsidian";
 import type NoteMakerAI from "../../main";
 import type { LlmVendor } from "../../settings/schema";
+import { SUBJECT_DIR, SUBJECT_PHOTOS_DIR } from "../../core/subject/implementation";
 import { FolderSuggest } from "../components/FolderSuggest";
 
 const OPENAI_MODEL_OPTIONS: Array<{ value: string; label: string }> = [
@@ -52,7 +53,7 @@ export class NoteMakerAISettingTab extends PluginSettingTab {
 			.setName("Notes Folder")
 			.setDesc("Where to save new notes.")
 			.addText((text) => {
-				text.setPlaceholder("e.g. Bases/Books")
+				text.setPlaceholder(`e.g. ${SUBJECT_DIR}`)
 					.setValue(this.plugin.settings.folders.notes)
 					.onChange(async (value) => {
 						this.plugin.settings.folders.notes = value.trim();
@@ -68,7 +69,7 @@ export class NoteMakerAISettingTab extends PluginSettingTab {
 			.setName("Photos Folder")
 			.setDesc("Where to save/move images.")
 			.addText((text) => {
-				text.setPlaceholder("e.g. Bases/Books/photos")
+				text.setPlaceholder(`e.g. ${SUBJECT_PHOTOS_DIR}`)
 					.setValue(this.plugin.settings.folders.photos)
 					.onChange(async (value) => {
 						this.plugin.settings.folders.photos = value.trim();
@@ -385,8 +386,8 @@ export class NoteMakerAISettingTab extends PluginSettingTab {
 		};
 
 		const defaultLlmSetting = new Setting(containerEl)
-			.setName("Default LLM")
-			.setDesc("Used unless overridden below.");
+			.setName("LLM to use")
+			.setDesc("Select an LLM from your defined LLMs above.");
 		defaultLlmSetting.addDropdown((dd) => {
 			const selectEl = dd.selectEl;
 			selectEl.dataset.role = "llm-default-select";

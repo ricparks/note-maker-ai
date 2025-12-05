@@ -41,6 +41,7 @@ import type {
 	SubjectPromptContext,
 	SubjectNoteSections,
 } from "./subject";
+import { SUBJECT_DIR } from "./subject/implementation";
 
 import {
 	NO_ACTIVE_FILE_NOTICE,
@@ -51,7 +52,6 @@ import {
 	NOTE_EXISTS_NOTICE,
 	NOTE_CREATED_NOTICE,
 	COULD_NOT_CREATE_NOTE,
-	BASES_DEFAULT_DIR,
 	IMAGE_EXTENSIONS,
 	UNKNOWN_VENDOR_ERROR,
 } from "../utils/constants";
@@ -834,7 +834,7 @@ export class NoteMakerCore {
 		llmLabelOverride?: string;
 	} {
 		const folders = this.plugin.settings.folders;
-		const defaultFolder = this.subject.directory || BASES_DEFAULT_DIR;
+		const defaultFolder = this.subject.directory || SUBJECT_DIR;
 
 		const notesDir = folders.notes?.trim() || defaultFolder;
 		const photosDir = folders.photos?.trim() || `${notesDir}/photos`;
@@ -1018,7 +1018,7 @@ export class NoteMakerCore {
 			this.subject.getNoteFilename(info)
 		);
 		const { notesDir } = this.resolveSubjectDirsAndLlm();
-		const dir = notesDir || this.subject.directory || BASES_DEFAULT_DIR;
+		const dir = notesDir || this.subject.directory || SUBJECT_DIR;
 		// Ensure notes folder exists (no-op if already present)
 		const abstract = this.plugin.app.vault.getAbstractFileByPath(dir);
 		if (!abstract) {

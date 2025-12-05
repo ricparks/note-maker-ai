@@ -19,7 +19,6 @@ export const UNKNOWN_VENDOR_ERROR = "Error: Unknown LLM vendor selected.";
 
 // Paths
 // Fallback directory if a SubjectDefinition does not specify its own directory.
-export const BASES_DEFAULT_DIR = "Bases/Books";
 
 // Small helper templates for dynamic messages
 export const PROCESSING_NOTICE = (fileName: string) => `Processing ${fileName}...`;
