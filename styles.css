@@ -8,7 +8,7 @@ If your plugin does not need CSS, delete this file.
 */
 
 /* Ghost, compact danger button for delete actions */
-.notetakerai-btn-ghost-danger {
+.notemakerai-btn-ghost-danger {
 	background: transparent;
 	color: var(--text-muted);
 	border: none;
@@ -17,19 +17,19 @@ If your plugin does not need CSS, delete this file.
 	border-radius: 6px;
 }
 
-.notetakerai-btn-ghost-danger:hover,
-.notetakerai-btn-ghost-danger:active {
+.notemakerai-btn-ghost-danger:hover,
+.notemakerai-btn-ghost-danger:active {
 	background: var(--background-modifier-error);
 	color: var(--text-on-accent);
 }
 
-.notetakerai-btn-ghost-danger:focus-visible {
+.notemakerai-btn-ghost-danger:focus-visible {
 	outline: 2px solid var(--background-modifier-error);
 	outline-offset: 1px;
 }
 
 /* Small square-ish icon button sizing */
-.notetakerai-icon-btn {
+.notemakerai-icon-btn {
 	min-width: 24px;
 	min-height: 24px;
 	display: inline-flex;

@@ -1,5 +1,5 @@
 {
-	"name": "basemaker",
+	"name": "note-maker-ai",
 	"version": "1.0.0",
 	"description": "Obsidan plugin for AI creation of notes for bases",
 	"main": "main.js",

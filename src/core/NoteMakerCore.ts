@@ -27,9 +27,10 @@
  *  - Replace direct Notice calls with structured result propagation for richer UI.
  *  - Introduce caching or memoization for repeated image processing (if needed).
  */
+// NoteMakerCore.ts
 import { TFile } from "obsidian";
 import { createProgressModal } from "../ui/progress/ProgressModal";
-import type NoteTakerAI from "../main";
+import type NoteMakerAI from "../main";
 import { PreparedImage } from "./image/PreparedImage";
 // Subject system
 import { activeSubject } from "./subject";
@@ -80,10 +81,10 @@ const SECTION_HEADING_ALIASES: Record<string, string[]> = {
 	pa: ["prompt additions"],
 };
 
-export class NoteTakerAICore {
+export class NoteMakerCore {
 	private redoContext: RedoContext | null = null;
 
-	constructor(private plugin: NoteTakerAI) {}
+	constructor(private plugin: NoteMakerAI) {}
 
 	/**
 	 * Resolve the currently active subject definition.
@@ -311,7 +312,7 @@ export class NoteTakerAICore {
 			typeof (this.subject as any).getPrompt === "function"
 				? (this.subject as any).getPrompt(promptContext)
 				: this.subject.prompt;
-		console.log("[NoteTakerAI] Redo prompt:", prompt);
+		console.log("[NoteMakerAI] Redo prompt:", prompt);
 		const photoFile = this.resolveRedoPhoto(noteData, file, content);
 		if (!photoFile) {
 			progressModal.error(
@@ -371,7 +372,7 @@ export class NoteTakerAICore {
 			progressModal.done(false);
 			return;
 		}
-		console.log("[NoteTakerAI] Redo raw subject:", raw);
+		console.log("[NoteMakerAI] Redo raw subject:", raw);
 		this.redoContext.rawSubject = raw;
 		progressModal.info("Fetched redo subject data");
 
@@ -616,7 +617,7 @@ export class NoteTakerAICore {
 			.replace(/[\\/:?*"<>|]/g, " ")
 			.replace(/\s+/g, " ")
 			.trim();
-		return raw.length > 0 ? raw : "NoteTakerAI Note";
+		return raw.length > 0 ? raw : "NoteMakerAI Note";
 	}
 
 	private async renameRedoFileIfNeeded(

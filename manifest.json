@@ -1,6 +1,6 @@
 {
-	"id": "notetaker-ai",
-	"name": "NoteTakerAI",
+	"id": "note-maker-ai",
+	"name": "NoteMakerAI",
 	"version": "0.1.06",
 	"minAppVersion": "0.15.0",
 	"description": "Obsidian plugin to create notes for bases.",

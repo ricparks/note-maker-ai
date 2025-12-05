@@ -1,6 +1,6 @@
 // Settings Tab UI (moved under ui/settings for cohesion)
 import { App, PluginSettingTab, Setting, Notice } from "obsidian";
-import type NoteTakerAI from "../../main";
+import type NoteMakerAI from "../../main";
 import type { LlmVendor } from "../../settings/schema";
 import { FolderSuggest } from "../components/FolderSuggest";
 
@@ -28,9 +28,9 @@ const MODEL_OPTION_MAP: Record<LlmVendor, Array<{ value: string; label: string }
 	openrouter: OPENROUTER_MODEL_OPTIONS,
 };
 
-export class NoteTakerAISettingTab extends PluginSettingTab {
-	plugin: NoteTakerAI;
-	constructor(app: App, plugin: NoteTakerAI) {
+export class NoteMakerAISettingTab extends PluginSettingTab {
+	plugin: NoteMakerAI;
+	constructor(app: App, plugin: NoteMakerAI) {
 		super(app, plugin);
 		this.plugin = plugin;
 	}

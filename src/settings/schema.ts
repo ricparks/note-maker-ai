@@ -53,7 +53,10 @@ export interface NarrativeStyleEntry {
 // ------------------------------------------------------------------
 // Settings V3 (Latest)
 // ------------------------------------------------------------------
-export interface NoteTakerAISettings {
+// ------------------------------------------------------------------
+// Settings V3 (Latest)
+// ------------------------------------------------------------------
+export interface NoteMakerAISettings {
   llms: LlmConfigEntry[];
   defaultLlmLabel?: string;
 
@@ -74,7 +77,7 @@ export interface NoteTakerAISettings {
 
 export const DEFAULT_LLM_LABEL = 'default';
 
-export const DEFAULT_SETTINGS: NoteTakerAISettings = {
+export const DEFAULT_SETTINGS: NoteMakerAISettings = {
   llms: [
     {
       label: "gemini-flash",
