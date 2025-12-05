@@ -1,0 +1,65 @@
+import { AiResult, OpenAIParams } from './types';
+
+export async function callOpenAIClient(params: OpenAIParams): Promise<AiResult> {
+  const { base64Image, apiKey, model, prompt } = params; // vendor field unused except for narrowing
+  const url = 'https://api.openai.com/v1/chat/completions';
+
+  const requestBody = {
+    model,
+    response_format: { type: 'json_object' },
+    messages: [
+      {
+        role: 'user',
+        content: [
+          { type: 'text', text: prompt },
+          {
+            type: 'image_url',
+            image_url: { url: `data:image/jpeg;base64,${base64Image}` }
+          }
+        ]
+      }
+    ]
+  };
+
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`
+      },
+      body: JSON.stringify(requestBody)
+    });
+
+    if (!response.ok) {
+      let errorPayload: any = null;
+      try { errorPayload = await response.json(); } catch {}
+      return {
+        ok: false,
+        error: errorPayload?.error?.message || `OpenAI API HTTP ${response.status}`,
+        errorType: 'api',
+        raw: errorPayload,
+        model
+      };
+    }
+
+    let outer: any;
+    try { outer = await response.json(); } catch (e) {
+      return { ok: false, error: 'Failed to parse OpenAI JSON body', errorType: 'parse', cause: e, model };
+    }
+
+    const content = outer?.choices?.[0]?.message?.content;
+    if (typeof content !== 'string') {
+      return { ok: false, error: 'OpenAI response missing content', errorType: 'structure', raw: outer, model };
+    }
+
+    try {
+      const data = JSON.parse(content);
+      return { ok: true, data, raw: outer, model };
+    } catch (e) {
+      return { ok: false, error: 'OpenAI inner JSON parse error', errorType: 'parse', raw: { outer, content }, cause: e, model };
+    }
+  } catch (e) {
+    return { ok: false, error: 'Network error contacting OpenAI', errorType: 'network', cause: e, model };
+  }
+}

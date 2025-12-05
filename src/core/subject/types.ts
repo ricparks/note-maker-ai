@@ -1,0 +1,64 @@
+// Generic subject typing to allow future expansion beyond wine.
+
+import type { TFile } from 'obsidian';
+
+/**
+ * Base shape for parsed subject information returned from a SubjectDefinition.
+ */
+export interface SubjectInfoBase {
+  // Title or main display name for the subject (e.g., wine name, book title)
+  title: string;
+  // Canonical secondary producer/author/etc.
+  producer?: string;
+  // Original JSON or object returned by the AI (for debugging or advanced templates)
+  raw: any;
+  // Arbitrary structured fields (normalized key/value pairs)
+  fields: Record<string, string | number | boolean | null>;
+}
+
+export interface SubjectNoteSections {
+  [heading: string]: string;
+}
+
+export interface SubjectNoteData {
+  properties: Record<string, any>;
+  sections: SubjectNoteSections;
+  /** Optional subject-specific summary suitable for logging. */
+  logSummary?: string;
+}
+
+export interface SubjectExistingNoteContext {
+  file: TFile;
+  content: string;
+  frontmatter?: Record<string, any>;
+}
+
+export interface SubjectPromptContext {
+  exifData?: import('../image/PreparedImage').ExifData;
+  noteData?: SubjectNoteData;
+}
+
+/**
+ * Contract for implementing a subject (e.g., books, wine). Each subject defines
+ * how to prompt the LLM, how to parse its response, how to name files, and how
+ * to build the markdown note content.
+ */
+export interface SubjectDefinition<T extends SubjectInfoBase = SubjectInfoBase> {
+  id: string;                 // stable identifier (e.g., 'wine')
+  prompt: string;             // AI prompt to send
+  /** Optional: Build a prompt dynamically based on context (e.g., EXIF or parsed note data). If provided, takes precedence over 'prompt'. */
+  getPrompt?(context: SubjectPromptContext): string;
+  getNoteFilename(info: T): string;  // derive filename (without extension)
+  buildNote(info: T, context: { photoLink?: string; coverFileName?: string; exifData?: import('../image/PreparedImage').ExifData; narrativeStyleLabel?: string }): string; // build markdown note
+  parse(aiJson: any): T;      // map AI JSON to typed structure with fallbacks
+  // Optional per-subject note directory (relative inside vault). If omitted, fallback constant used.
+  directory?: string;
+  /** Optional hook to compute a canonical base photo file name (without extension). */
+  getPhotoBasename?(info: T, context?: { exifData?: import('../image/PreparedImage').ExifData }): string;
+  /** Optional ribbon icon id for this subject (lucide icon id). */
+  ribbonIcon?: string;
+  /** Optional ribbon title for this subject. */
+  ribbonTitle?: string;
+  /** Optional hook used during redo to parse an existing markdown note. */
+  parseExistingNote?(note: SubjectExistingNoteContext): SubjectNoteData | Promise<SubjectNoteData>;
+}

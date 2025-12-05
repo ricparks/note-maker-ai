@@ -1,0 +1,91 @@
+// Centralized constants for UI text, notices, paths, and small templates.
+
+// Ribbon
+export const RIBBON_ICON = "diamond-plus";
+export const RIBBON_TITLE = "Create subject note";
+
+// Notices / user-facing messages
+export const NO_ACTIVE_FILE_NOTICE = "No active file. Please open an image.";
+export const NOT_IMAGE_NOTICE = "The active file is not a JPG or PNG image.";
+
+// Generic subject-oriented messages (preferred going forward)
+export const SUCCESS_FETCHED_SUBJECT = "Successfully fetched subject data!";
+export const FAILED_GET_SUBJECT = "Failed to get subject data from AI.";
+
+/**
+ * @deprecated Legacy wine-specific alias. Prefer SUCCESS_FETCHED_SUBJECT.
+ * Retained for backward compatibility until a major version bump.
+ */
+export const SUCCESS_FETCHED_WINE = SUCCESS_FETCHED_SUBJECT;
+/**
+ * @deprecated Legacy wine-specific alias. Prefer FAILED_GET_SUBJECT.
+ * Retained for backward compatibility until a major version bump.
+ */
+export const FAILED_GET_WINE = FAILED_GET_SUBJECT;
+
+export const COULD_NOT_CREATE_NOTE = "Error: Could not create the new note.";
+export const UNKNOWN_VENDOR_ERROR = "Error: Unknown LLM vendor selected.";
+// Removed unused AI_* parse/structure constants; errors are surfaced directly by AI clients.
+
+// Paths
+// Fallback directory if a SubjectDefinition does not specify its own directory.
+// Wine now sets 'Bases/Wines', books sets 'Bases/Books'. This maintains backward compatibility.
+export const BASES_DEFAULT_DIR = "Bases/Wines"; // legacy default
+/**
+ * @deprecated Backward compatibility alias. Prefer BASES_DEFAULT_DIR or per-subject directories.
+ */
+export const BASES_WINES_DIR = BASES_DEFAULT_DIR;
+
+// Small helper templates for dynamic messages
+export const PROCESSING_NOTICE = (fileName: string) => `Processing ${fileName}...`;
+export const FAILED_READ_IMAGE_NOTICE = (fileName: string) => `Failed to read the image file: ${fileName}.`;
+export const NOTE_EXISTS_NOTICE = (fileName: string) => `Note "${fileName}.md" already exists. Aborting.`;
+export const NOTE_CREATED_NOTICE = (fileName: string) => `Successfully created note: ${fileName}.md`;
+
+// Other
+export const IMAGE_EXTENSIONS = ["jpg", "png"];
+
+// --- Wine subject literals ---
+/** Stable identifier for the Wine subject definition. */
+export const WINE_SUBJECT_ID = 'wine';
+/** Default directory for Wine notes inside the vault. */
+export const WINE_SUBJECT_DIR = 'Bases/Wines';
+/** Default fallback display name when winery is missing. */
+export const WINE_UNKNOWN_WINERY = 'Unknown Winery';
+/** Default fallback title when none can be inferred. */
+export const WINE_UNTITLED = 'Untitled';
+/** Section heading labels used in wine notes. */
+export const WINE_SECTION_MY_NOTES = 'My Notes';
+export const WINE_SECTION_VENDOR_NOTES = "Vendor's Notes";
+export const WINE_SECTION_PAIRING_SUGGESTIONS = 'Pairing Suggestions';
+export const WINE_SECTION_CRITIC_NOTES = "Critic's Notes";
+
+// --- Book subject literals ---
+/** Stable identifier for the Books subject definition. */
+export const BOOK_SUBJECT_ID = 'books';
+/** Default directory for Book notes inside the vault. */
+export const BOOK_SUBJECT_DIR = 'Bases/Books';
+/** Default fallback display name for author. */
+export const BOOK_UNKNOWN_AUTHOR = 'Unknown Author';
+/** Default fallback display title for book notes. */
+export const BOOK_UNTITLED = 'Untitled Book';
+/** Photo filename fallbacks and limits. */
+export const BOOK_PHOTO_AUTHOR_UNKNOWN = 'unknown';
+export const BOOK_PHOTO_TITLE_DEFAULT = 'untitled';
+export const BOOK_PHOTO_MAX_TITLE_SLUG = 60;
+export const BOOK_PHOTO_FALLBACK_BASENAME = 'image';
+/** Section heading labels used in book notes. */
+export const BOOK_SECTION_MY_NOTES = 'My Notes';
+export const BOOK_SECTION_SUMMARY = 'Summary';
+export const BOOK_SECTION_THEMES = 'Themes';
+export const BOOK_SECTION_NOTES = 'Notes';
+
+// --- Travel subject literals ---
+export const TRAVEL_SUBJECT_ID = 'travel';
+export const TRAVEL_SUBJECT_DIR = 'Bases/Travel';
+export const TRAVEL_UNKNOWN_PLACE = 'Unknown Place';
+export const TRAVEL_UNKNOWN_CITY = 'Unknown City';
+export const TRAVEL_UNKNOWN_COUNTRY = 'Unknown Country';
+export const TRAVEL_SECTION_MY_NOTES = 'My Notes';
+export const TRAVEL_SECTION_DESCRIPTION = 'Description';
+export const TRAVEL_SECTION_NOTES_OF_INTEREST = 'Notes of Interest';
