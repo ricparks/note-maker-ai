@@ -275,6 +275,7 @@ export class NoteMakerCore {
 	): Promise<void> {
 		this.redoContext = null;
 		progressModal.info("Redoing image");
+		console.log("Current subject keys:", Object.keys(this.subject));
 		const subjectAny = this.subject as {
 			parseExistingNote?: (
 				note: SubjectExistingNoteContext

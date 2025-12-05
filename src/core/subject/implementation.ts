@@ -220,6 +220,51 @@ ${bottomEmbed}`;
       warnings.push("Warning: The detected ISBN appears invalid and was omitted.");
     }
     return warnings;
+  },
+
+  parseExistingNote(note: import('./types').SubjectExistingNoteContext) {
+    const properties = note.frontmatter || {};
+    const sections: import('./types').SubjectNoteSections = {};
+    
+    // Simple regex-based section parser (assuming h4 headers as per buildNote)
+    const lines = note.content.split(/\r?\n/);
+    let currentSection: string | null = null;
+    let buffer: string[] = [];
+    
+    for (const line of lines) {
+      const match = line.match(/^####\s+(.*)$/);
+      if (match) {
+        if (currentSection) {
+          sections[currentSection] = buffer.join('\n').trim();
+        }
+        currentSection = match[1].trim();
+        buffer = [];
+      } else if (currentSection) {
+        buffer.push(line);
+      }
+    }
+    if (currentSection) {
+      sections[currentSection] = buffer.join('\n').trim();
+    }
+    
+    return {
+      properties,
+      sections,
+      logSummary: `Parsed book note: "${properties.title || 'Untitled'}"`
+    };
+  },
+
+  getPrompt(context) {
+    let prompt = BOOK_PROMPT;
+    if (context.noteData) {
+      const sections = context.noteData.sections;
+      // Check for "Prompt Additions" or alias "PA"
+      const additions = sections['Prompt Additions'] || sections['PA'] || sections['pa'];
+      if (additions && additions.trim().length > 0) {
+        prompt += `\n\nIMPORTANT: The user has provided additional instructions for this request:\n${additions.trim()}`;
+      }
+    }
+    return prompt;
   }
 };
 

@@ -80,13 +80,13 @@ export const DEFAULT_LLM_LABEL = 'default';
 export const DEFAULT_SETTINGS: NoteMakerAISettings = {
   llms: [
     {
-      label: "gemini-flash",
+      label: "gemini3",
       vendor: "gemini",
-      model: "gemini-1.5-flash",
+      model: "gemini-3-pro-preview",
       apiKey: process.env.GEMINI_API_KEY || "",
     },
   ],
-  defaultLlmLabel: "gemini-flash",
+  defaultLlmLabel: "gemini3",
   folders: {
     notes: "Bases/Books",
     photos: "Bases/Books/photos",
