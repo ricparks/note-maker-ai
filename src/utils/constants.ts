@@ -29,12 +29,7 @@ export const UNKNOWN_VENDOR_ERROR = "Error: Unknown LLM vendor selected.";
 
 // Paths
 // Fallback directory if a SubjectDefinition does not specify its own directory.
-// Wine now sets 'Bases/Wines', books sets 'Bases/Books'. This maintains backward compatibility.
-export const BASES_DEFAULT_DIR = "Bases/Wines"; // legacy default
-/**
- * @deprecated Backward compatibility alias. Prefer BASES_DEFAULT_DIR or per-subject directories.
- */
-export const BASES_WINES_DIR = BASES_DEFAULT_DIR;
+export const BASES_DEFAULT_DIR = "Bases/Books";
 
 // Small helper templates for dynamic messages
 export const PROCESSING_NOTICE = (fileName: string) => `Processing ${fileName}...`;
@@ -44,21 +39,6 @@ export const NOTE_CREATED_NOTICE = (fileName: string) => `Successfully created n
 
 // Other
 export const IMAGE_EXTENSIONS = ["jpg", "png"];
-
-// --- Wine subject literals ---
-/** Stable identifier for the Wine subject definition. */
-export const WINE_SUBJECT_ID = 'wine';
-/** Default directory for Wine notes inside the vault. */
-export const WINE_SUBJECT_DIR = 'Bases/Wines';
-/** Default fallback display name when winery is missing. */
-export const WINE_UNKNOWN_WINERY = 'Unknown Winery';
-/** Default fallback title when none can be inferred. */
-export const WINE_UNTITLED = 'Untitled';
-/** Section heading labels used in wine notes. */
-export const WINE_SECTION_MY_NOTES = 'My Notes';
-export const WINE_SECTION_VENDOR_NOTES = "Vendor's Notes";
-export const WINE_SECTION_PAIRING_SUGGESTIONS = 'Pairing Suggestions';
-export const WINE_SECTION_CRITIC_NOTES = "Critic's Notes";
 
 // --- Book subject literals ---
 /** Stable identifier for the Books subject definition. */
@@ -79,13 +59,3 @@ export const BOOK_SECTION_MY_NOTES = 'My Notes';
 export const BOOK_SECTION_SUMMARY = 'Summary';
 export const BOOK_SECTION_THEMES = 'Themes';
 export const BOOK_SECTION_NOTES = 'Notes';
-
-// --- Travel subject literals ---
-export const TRAVEL_SUBJECT_ID = 'travel';
-export const TRAVEL_SUBJECT_DIR = 'Bases/Travel';
-export const TRAVEL_UNKNOWN_PLACE = 'Unknown Place';
-export const TRAVEL_UNKNOWN_CITY = 'Unknown City';
-export const TRAVEL_UNKNOWN_COUNTRY = 'Unknown Country';
-export const TRAVEL_SECTION_MY_NOTES = 'My Notes';
-export const TRAVEL_SECTION_DESCRIPTION = 'Description';
-export const TRAVEL_SECTION_NOTES_OF_INTEREST = 'Notes of Interest';

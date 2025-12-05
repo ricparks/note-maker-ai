@@ -1,8 +1,7 @@
 // Settings Tab UI (moved under ui/settings for cohesion)
 import { App, PluginSettingTab, Setting, Notice } from "obsidian";
-import { subjects } from "../../core/subject";
-import BaseMakerPlugin from "../../main";
-import type { LlmVendor, SubjectFolderEntry } from "../../settings/schema";
+import type NoteTakerAI from "../../main";
+import type { LlmVendor } from "../../settings/schema";
 import { FolderSuggest } from "../components/FolderSuggest";
 
 const OPENAI_MODEL_OPTIONS: Array<{ value: string; label: string }> = [
@@ -32,8 +31,8 @@ const MODEL_OPTION_MAP: Record<LlmVendor, Array<{ value: string; label: string }
 };
 
 export class BaseMakerSettingTab extends PluginSettingTab {
-	plugin: BaseMakerPlugin;
-	constructor(app: App, plugin: BaseMakerPlugin) {
+	plugin: NoteTakerAI;
+	constructor(app: App, plugin: NoteTakerAI) {
 		super(app, plugin);
 		this.plugin = plugin;
 	}
@@ -48,30 +47,39 @@ export class BaseMakerSettingTab extends PluginSettingTab {
 			.setName("Version")
 			.setDesc(this.plugin.manifest.version);
 
-		// SUBJECT
+		// FOLDERS
+		containerEl.createEl("h3", { text: "Folders" });
+		
 		new Setting(containerEl)
-			.setName("Subject")
-			.setDesc("Domain for note generation.")
-			.addDropdown((dd) => {
-				Object.keys(subjects).forEach((id) => {
-					const label =
-						id === "wine"
-							? "Wine"
-							: id === "books"
-							? "Books"
-							: id === "travel"
-							? "Travel"
-							: id;
-					dd.addOption(id, label);
-				});
-				dd.setValue(this.plugin.settings.subject.id).onChange(
-					async (v) => {
-						this.plugin.settings.subject.id = v as any;
+			.setName("Notes Folder")
+			.setDesc("Where to save new book notes.")
+			.addText((text) => {
+				text.setPlaceholder("e.g. Bases/Books")
+					.setValue(this.plugin.settings.folders.notes)
+					.onChange(async (value) => {
+						this.plugin.settings.folders.notes = value.trim();
 						await this.plugin.saveSettings();
-						// Refresh ribbon icon/title after subject change
-						(this.plugin as any)["renderRibbon"]?.();
-					}
-				);
+					});
+				new FolderSuggest(this.app, text.inputEl, async (picked) => {
+					this.plugin.settings.folders.notes = picked;
+					await this.plugin.saveSettings();
+				});
+			});
+
+		new Setting(containerEl)
+			.setName("Photos Folder")
+			.setDesc("Where to save/move book cover images.")
+			.addText((text) => {
+				text.setPlaceholder("e.g. Bases/Books/photos")
+					.setValue(this.plugin.settings.folders.photos)
+					.onChange(async (value) => {
+						this.plugin.settings.folders.photos = value.trim();
+						await this.plugin.saveSettings();
+					});
+				new FolderSuggest(this.app, text.inputEl, async (picked) => {
+					this.plugin.settings.folders.photos = picked;
+					await this.plugin.saveSettings();
+				});
 			});
 
 		// LLM CONFIGURATION
@@ -88,23 +96,28 @@ export class BaseMakerSettingTab extends PluginSettingTab {
 		});
 
 		let defaultLlmSelectEl: HTMLSelectElement | null = null;
+		let folderLlmSelectEl: HTMLSelectElement | null = null;
 
 		const refreshLlmDependentSelects = async () => {
 			const llms = ensureLlmArray();
 			const labels = llms.map((entry) => entry.label);
 			let needsSave = false;
 
-			const defaultSelect = defaultLlmSelectEl;
-			if (defaultSelect) {
-				while (defaultSelect.firstChild) {
-					defaultSelect.removeChild(defaultSelect.firstChild);
+			const updateSelect = (select: HTMLSelectElement, selectedValue?: string) => {
+				while (select.firstChild) {
+					select.removeChild(select.firstChild);
 				}
 				llms.forEach((entry) => {
-					const opt = defaultSelect.createEl("option", {
+					const opt = select.createEl("option", {
 						text: entry.label,
 					});
 					opt.value = entry.label;
 				});
+				return selectedValue || "";
+			};
+
+			if (defaultLlmSelectEl) {
+				updateSelect(defaultLlmSelectEl);
 				if (
 					!this.plugin.settings.defaultLlmLabel ||
 					!labels.includes(this.plugin.settings.defaultLlmLabel)
@@ -112,45 +125,33 @@ export class BaseMakerSettingTab extends PluginSettingTab {
 					this.plugin.settings.defaultLlmLabel = labels[0];
 					needsSave = true;
 				}
-				const effectiveDefault =
-					this.plugin.settings.defaultLlmLabel || labels[0] || "";
-				if (defaultSelect.value !== effectiveDefault) {
-					defaultSelect.value = effectiveDefault;
-				}
+				defaultLlmSelectEl.value = this.plugin.settings.defaultLlmLabel || labels[0] || "";
 			}
-
-			const folderSelects = containerEl.querySelectorAll<HTMLSelectElement>(
-				'select[data-role="llm-label-select"]'
-			);
-			folderSelects.forEach((select) => {
-				const index = Number(select.dataset.index ?? "-1");
-				const folder =
-					index >= 0
-						? this.plugin.settings.subjectFolders?.[index]
-						: undefined;
-				while (select.firstChild) {
-					select.removeChild(select.firstChild);
+			
+			if (folderLlmSelectEl) {
+				while (folderLlmSelectEl.firstChild) {
+					folderLlmSelectEl.removeChild(folderLlmSelectEl.firstChild);
 				}
-				const defaultOpt = select.createEl("option", {
-					text: "Use default",
-				});
-				defaultOpt.value = "";
+				folderLlmSelectEl.createEl("option", { text: "Use Default", value: "" });
+
 				llms.forEach((entry) => {
-					const opt = select.createEl("option", {
+					const opt = folderLlmSelectEl!.createEl("option", {
 						text: entry.label,
 					});
 					opt.value = entry.label;
 				});
-				const desired =
-					folder?.llmLabel && labels.includes(folder.llmLabel)
-						? folder.llmLabel
-						: "";
-				select.value = desired;
-				if (folder && folder.llmLabel && !labels.includes(folder.llmLabel)) {
-					folder.llmLabel = undefined;
-					needsSave = true;
+
+				const current = this.plugin.settings.folders.llmLabel;
+				if (current && labels.includes(current)) {
+					folderLlmSelectEl.value = current;
+				} else {
+					folderLlmSelectEl.value = "";
+					if (current) { // It was set but no longer exists
+						this.plugin.settings.folders.llmLabel = undefined;
+						needsSave = true;
+					}
 				}
-			});
+			}
 
 			if (needsSave) {
 				await this.plugin.saveSettings();
@@ -214,10 +215,8 @@ export class BaseMakerSettingTab extends PluginSettingTab {
 					if (this.plugin.settings.defaultLlmLabel === previous) {
 						this.plugin.settings.defaultLlmLabel = val;
 					}
-					for (const folder of this.plugin.settings.subjectFolders || []) {
-						if (folder.llmLabel === previous) {
-							folder.llmLabel = val;
-						}
+					if (this.plugin.settings.folders.llmLabel === previous) {
+						this.plugin.settings.folders.llmLabel = val;
 					}
 					await this.plugin.saveSettings();
 					await refreshLlmDependentSelects();
@@ -369,10 +368,8 @@ export class BaseMakerSettingTab extends PluginSettingTab {
 						) {
 							this.plugin.settings.defaultLlmLabel = llms[0]?.label;
 						}
-						for (const folder of this.plugin.settings.subjectFolders || []) {
-							if (folder.llmLabel === removed.label) {
-								folder.llmLabel = undefined;
-							}
+						if (this.plugin.settings.folders.llmLabel === removed.label) {
+							this.plugin.settings.folders.llmLabel = undefined;
 						}
 					}
 					await this.plugin.saveSettings();
@@ -413,7 +410,7 @@ export class BaseMakerSettingTab extends PluginSettingTab {
 
 		const defaultLlmSetting = new Setting(containerEl)
 			.setName("Default LLM")
-			.setDesc("Used when a subject folder does not select a specific LLM.");
+			.setDesc("Used unless overridden below.");
 		defaultLlmSetting.addDropdown((dd) => {
 			const selectEl = dd.selectEl;
 			selectEl.dataset.role = "llm-default-select";
@@ -425,6 +422,18 @@ export class BaseMakerSettingTab extends PluginSettingTab {
 				await this.plugin.saveSettings();
 			});
 		});
+
+		new Setting(containerEl)
+			.setName("Override LLM for Books")
+			.setDesc("Use a specific LLM just for this subject (optional).")
+			.addDropdown((dd) => {
+				folderLlmSelectEl = dd.selectEl;
+				dd.onChange(async (value) => {
+					this.plugin.settings.folders.llmLabel = value || undefined;
+					await this.plugin.saveSettings();
+				});
+			});
+
 		void refreshLlmDependentSelects();
 
 		// IMAGE HANDLING
@@ -450,37 +459,29 @@ export class BaseMakerSettingTab extends PluginSettingTab {
 					})
 			);
 
-		// NARRATIVE STYLE SETTINGS (moved before Subject folders)
+		// NARRATIVE STYLE SETTINGS
 		containerEl.createEl("h3", { text: "Narrative Style" });
 		const toneWrap = containerEl.createEl("div", {
 			cls: "basemaker-tone-rows",
 		});
 
+		let folderStyleSelectEl: HTMLSelectElement | null = null;
+		
 		const refreshNarrativeStyleSelects = () => {
 			const styles = this.plugin.settings.narrativeStyles || [];
-			const selects = containerEl.querySelectorAll<HTMLSelectElement>(
-				'select[data-role="narrative-style-select"]'
-			);
-			selects.forEach((select) => {
-				const currentValue = select.value;
-				while (select.firstChild) {
-					select.removeChild(select.firstChild);
+			
+			if (folderStyleSelectEl) {
+				while (folderStyleSelectEl.firstChild) {
+					folderStyleSelectEl.removeChild(folderStyleSelectEl.firstChild);
 				}
-				const noneOpt = select.createEl("option", {
-					text: "No narrative style",
-				});
-				noneOpt.value = "";
+				folderStyleSelectEl.createEl("option", { text: "No narrative style", value: "" });
 				styles.forEach((style) => {
-					const opt = select.createEl("option", {
-						text: style.label || "",
-					});
-					opt.value = style.label || "";
+					folderStyleSelectEl!.createEl("option", { text: style.label, value: style.label });
 				});
-				const hasCurrent = styles.some(
-					(style) => style.label === currentValue
-				);
-				select.value = hasCurrent ? currentValue : "";
-			});
+				const current = this.plugin.settings.folders.narrativeStyleLabel;
+				const exists = styles.some(s => s.label === current);
+				folderStyleSelectEl.value = exists ? current! : "";
+			}
 		};
 
 		let pendingFocusStyleIndex: number | undefined;
@@ -502,7 +503,7 @@ export class BaseMakerSettingTab extends PluginSettingTab {
 				const labelInput = row.createEl("input", { type: "text" });
 				labelInput.dataset.role = "narrative-label";
 				labelInput.dataset.index = String(idx);
-				labelInput.placeholder = "Label (max 8, alphanumeric)";
+				labelInput.placeholder = "Label (max 8)";
 				labelInput.value = t.label || "";
 				labelInput.maxLength = 8;
 				labelInput.addEventListener("keydown", (evt) => {
@@ -534,7 +535,11 @@ export class BaseMakerSettingTab extends PluginSettingTab {
 						labelInput.value = t.label || "";
 						return;
 					}
+					const prev = t.label;
 					t.label = val;
+					if (this.plugin.settings.folders.narrativeStyleLabel === prev) {
+						this.plugin.settings.folders.narrativeStyleLabel = val;
+					}
 					await this.plugin.saveSettings();
 					const shouldFocusStyle = pendingFocusStyleIndex === idx;
 					pendingFocusStyleIndex = undefined;
@@ -577,6 +582,9 @@ export class BaseMakerSettingTab extends PluginSettingTab {
 					const list = this.plugin.settings.narrativeStyles || [];
 					list.splice(idx, 1);
 					this.plugin.settings.narrativeStyles = list;
+					if (this.plugin.settings.folders.narrativeStyleLabel === t.label) {
+						this.plugin.settings.folders.narrativeStyleLabel = undefined;
+					}
 					await this.plugin.saveSettings();
 					renderToneRows();
 					refreshNarrativeStyleSelects();
@@ -615,226 +623,50 @@ export class BaseMakerSettingTab extends PluginSettingTab {
 			renderToneRows();
 			refreshNarrativeStyleSelects();
 		};
-
-		// Separator after Narrative Style section
-		containerEl.createEl("hr");
-
-		// SUBJECT FOLDERS
-		containerEl.createEl("h3", { text: "Subject Folders" });
-		const rowsWrap = containerEl.createEl("div", {
-			cls: "basemaker-subject-rows",
-		});
-
-		const renderRows = () => {
-			rowsWrap.empty();
-			const entries = this.plugin.settings.subjectFolders || [];
-			const used = new Set(
-				(this.plugin.settings.subjectFolders || []).map(
-					(e) => e.subjectId
-				)
-			);
-			const allIds = Object.keys(subjects) as Array<
-				keyof typeof subjects
-			>;
-			entries.forEach((entry, idx) => {
-				const row = rowsWrap.createEl("div", {
-					cls: "basemaker-subject-row",
-				});
-				row.style.display = "flex";
-				row.style.alignItems = "center";
-				row.style.gap = "10px";
-				row.style.marginBottom = "8px";
-
-				// Subject dropdown
-				const subjectSelect = row.createEl("select");
-				subjectSelect.dataset.role = "subject-select";
-				allIds.forEach((id) => {
-					const opt = subjectSelect.createEl("option", {
-						text:
-							id === "wine"
-								? "Wine"
-								: id === "books"
-								? "Books"
-								: id === "travel"
-								? "Travel"
-								: id,
-					});
-					opt.value = id;
-					opt.selected = id === entry.subjectId;
-					if (id !== entry.subjectId && used.has(id as any))
-						opt.disabled = true;
-				});
-				subjectSelect.onchange = async () => {
-					entry.subjectId = subjectSelect.value as any;
-					await this.plugin.saveSettings();
-					renderRows();
-					await refreshLlmDependentSelects();
-				};
-
-				// Notes folder input with inline suggestions
-				const notesInput = row.createEl("input", { type: "text" });
-				notesInput.placeholder = "Notes folder (e.g., Bases/Travel)";
-				notesInput.value = entry.notesFolder || "";
-				notesInput.style.minWidth = "8ch";
-				notesInput.onchange = async () => {
-					entry.notesFolder = notesInput.value.trim();
-					await this.plugin.saveSettings();
-				};
-				new FolderSuggest(this.app, notesInput, async (picked) => {
-					entry.notesFolder = picked;
+		
+		containerEl.createEl("h4", { text: "Default Narrative Style for Books" });
+		new Setting(containerEl)
+			.setDesc("Apply this style automatically to generated book summaries.")
+			.addDropdown(dd => {
+				folderStyleSelectEl = dd.selectEl;
+				dd.onChange(async (v) => {
+					this.plugin.settings.folders.narrativeStyleLabel = v || undefined;
 					await this.plugin.saveSettings();
 				});
-
-				// Photos folder input with inline suggestions
-				const photosInput = row.createEl("input", { type: "text" });
-				photosInput.placeholder =
-					"Photos folder (e.g., Bases/Travel/photos)";
-				photosInput.value = entry.photosFolder || "";
-				photosInput.style.minWidth = "8ch";
-				photosInput.onchange = async () => {
-					entry.photosFolder = photosInput.value.trim();
-					await this.plugin.saveSettings();
-				};
-				new FolderSuggest(this.app, photosInput, async (picked) => {
-					entry.photosFolder = picked;
-					await this.plugin.saveSettings();
-				});
-
-				// LLM dropdown (optional override)
-				const llmSelect = row.createEl("select");
-				llmSelect.dataset.role = "llm-label-select";
-				llmSelect.dataset.index = String(idx);
-				llmSelect.style.minWidth = "12ch";
-				llmSelect.onchange = async () => {
-					const value = llmSelect.value.trim();
-					entry.llmLabel = value || undefined;
-					await this.plugin.saveSettings();
-				};
-
-				// Narrative Style dropdown (optional association)
-				const toneSelect = row.createEl("select");
-				toneSelect.dataset.role = "narrative-style-select";
-				const noneOpt = toneSelect.createEl("option", {
-					text: "No narrative style",
-				});
-				noneOpt.value = "";
-				const tones = this.plugin.settings.narrativeStyles || [];
-				tones.forEach((t) => {
-					const opt = toneSelect.createEl("option", {
-						text: t.label,
-					});
-					opt.value = t.label;
-				});
-				toneSelect.value = entry.narrativeStyleLabel || "";
-				toneSelect.style.minWidth = "8ch";
-				toneSelect.onchange = async () => {
-					const v = toneSelect.value.trim();
-					entry.narrativeStyleLabel = v || undefined;
-					await this.plugin.saveSettings();
-				};
-
-				// Delete button (compact ghost "×")
-				const delBtn = row.createEl("button", { text: "×" });
-				delBtn.addClass("basemaker-btn-ghost-danger");
-				delBtn.addClass("basemaker-icon-btn");
-				delBtn.style.marginLeft = "auto";
-				delBtn.setAttr("aria-label", "Remove subject");
-				delBtn.title = "Remove subject";
-				delBtn.onclick = async () => {
-					const list = this.plugin.settings.subjectFolders || [];
-					list.splice(idx, 1);
-					this.plugin.settings.subjectFolders = list;
-					await this.plugin.saveSettings();
-					renderRows();
-					await refreshLlmDependentSelects();
-				};
 			});
-		};
+		refreshNarrativeStyleSelects();
 
-		renderRows();
-		void refreshLlmDependentSelects();
-
-		// Add new subject folder button
-		const addWrap = containerEl.createEl("div");
-		addWrap.style.display = "flex";
-		addWrap.style.justifyContent = "flex-end";
-		addWrap.style.marginTop = "8px";
-		const addBtn = addWrap.createEl("button", {
-			text: "Add new subject folder",
-		});
-		addBtn.addClass("mod-cta");
-		const refreshAddState = () => {
-			const used = new Set(
-				(this.plugin.settings.subjectFolders || []).map(
-					(e) => e.subjectId
-				)
-			);
-			const allIds = Object.keys(subjects) as Array<
-				keyof typeof subjects
-			>;
-			const available = allIds.filter((id) => !used.has(id as any));
-			addBtn.disabled = available.length === 0;
-			addBtn.title =
-				available.length === 0 ? "All subjects already configured" : "";
-		};
-		refreshAddState();
-		addBtn.onclick = async () => {
-			const used = new Set(
-				(this.plugin.settings.subjectFolders || []).map(
-					(e) => e.subjectId
-				)
-			);
-			const allIds = Object.keys(subjects) as Array<
-				keyof typeof subjects
-			>;
-			const available = allIds.filter((id) => !used.has(id as any));
-			if (available.length === 0) return;
-			const newEntry: SubjectFolderEntry = {
-				subjectId: available[0] as any,
-				notesFolder: "",
-				photosFolder: "",
-				llmLabel: this.plugin.settings.defaultLlmLabel,
-			};
-			this.plugin.settings.subjectFolders = [
-				...(this.plugin.settings.subjectFolders || []),
-				newEntry,
-			];
-			await this.plugin.saveSettings();
-			renderRows();
-			refreshAddState();
-			await refreshLlmDependentSelects();
-		};
 		// Separator after Subject Folders section
 		containerEl.createEl("hr");
 
-		// SUBJECT GUARDRAILS
-		containerEl.createEl("h3", { text: "Subject Guardrails" });
+		// VALIDATION
+		containerEl.createEl("h3", { text: "Validation" });
 		new Setting(containerEl)
 			.setName("Warn on subject mismatch")
 			.setDesc(
-				"Show a warning if the AI predicts a different category than the selected subject (Travel always allows)."
+				"Show a warning if the AI predicts the image is not a book."
 			)
 			.addToggle((t) =>
 				t
 					.setValue(
-						this.plugin.settings.subject.warnOnMismatch ?? true
+						this.plugin.settings.validation.warnOnMismatch ?? true
 					)
 					.onChange(async (val) => {
-						this.plugin.settings.subject.warnOnMismatch = val;
+						this.plugin.settings.validation.warnOnMismatch = val;
 						await this.plugin.saveSettings();
 					})
 			);
 		new Setting(containerEl)
 			.setName("Mismatch confidence threshold")
 			.setDesc(
-				"Warn only if predicted category confidence is at or above this value (0.0–1.0)."
+				"Warn only if the AI is this confident that it is NOT a book (0.0–1.0)."
 			)
 			.addText((t) =>
 				t
 					.setPlaceholder("0.7")
 					.setValue(
 						String(
-							this.plugin.settings.subject.mismatchThreshold ??
+							this.plugin.settings.validation.mismatchThreshold ??
 								0.7
 						)
 					)
@@ -842,7 +674,7 @@ export class BaseMakerSettingTab extends PluginSettingTab {
 						let n = parseFloat(val);
 						if (isNaN(n)) n = 0.7;
 						n = Math.max(0, Math.min(1, n));
-						this.plugin.settings.subject.mismatchThreshold = n;
+						this.plugin.settings.validation.mismatchThreshold = n;
 						await this.plugin.saveSettings();
 					})
 			);

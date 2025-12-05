@@ -1,4 +1,4 @@
-import type BaseMakerPlugin from '../main';
+import type NoteTakerAI from '../main';
 import {
   BaseMakerSettings,
   DEFAULT_SETTINGS,
@@ -6,7 +6,7 @@ import {
   DEFAULT_LLM_LABEL,
   LlmConfigEntry,
   LlmVendor,
-  SubjectFolderEntry,
+  BaseMakerSettingsV2,
 } from './schema';
 
 type LegacySettings = {
@@ -16,7 +16,7 @@ type LegacySettings = {
   openaiApiKey?: string;
   geminiApiKey?: string;
   subjectId?: string;
-  subjectFolders?: Array<Partial<SubjectFolderEntry> & { vendor?: LlmVendor }>;
+  subjectFolders?: Array<{ subjectId: any; notesFolder?: string; photosFolder?: string; llmLabel?: string; narrativeStyleLabel?: string; vendor?: LlmVendor }>;
 } & Record<string, any>;
 
 type Version1Settings = {
@@ -32,41 +32,15 @@ type Version1Settings = {
   experimental: BaseMakerSettings['experimental'];
   formatting: BaseMakerSettings['formatting'];
   image: BaseMakerSettings['image'];
-  subjectFolders?: Array<Partial<SubjectFolderEntry> & { vendor?: LlmVendor }>;
+  subjectFolders?: Array<{ subjectId: any; notesFolder?: string; photosFolder?: string; llmLabel?: string; narrativeStyleLabel?: string; vendor?: LlmVendor }>;
   narrativeStyles?: BaseMakerSettings['narrativeStyles'];
 } & Record<string, any>;
 
 // Simple migration framework (expand as versions evolve)
+// Simple migration framework (expand as versions evolve)
 function migrate(raw: any): BaseMakerSettings {
   // If there's no version, attempt to map from legacy flat structure.
   if (!raw || typeof raw !== 'object') return structuredClone(DEFAULT_SETTINGS);
-
-  const ensureDefaultSubjectId = (settings: BaseMakerSettings) => {
-    const validIds = new Set(['wine', 'books', 'travel']);
-    const currentId = (settings.subject && (settings.subject as any).id) as string | undefined;
-    if (!currentId || !validIds.has(currentId)) {
-      settings.subject.id = DEFAULT_SETTINGS.subject.id;
-    }
-  };
-
-  const sanitizeSubjectFolders = (
-    entries: SubjectFolderEntry[] | undefined,
-    availableLabels: Set<string>
-  ): SubjectFolderEntry[] => {
-    if (!entries?.length) return [];
-    return entries.map((entry) => {
-      const cleaned: SubjectFolderEntry = {
-        subjectId: entry.subjectId,
-        notesFolder: entry.notesFolder || '',
-        photosFolder: entry.photosFolder || '',
-        narrativeStyleLabel: entry.narrativeStyleLabel,
-      };
-      if (entry.llmLabel && availableLabels.has(entry.llmLabel)) {
-        cleaned.llmLabel = entry.llmLabel;
-      }
-      return cleaned;
-    });
-  };
 
   const normalizeLabels = (entries: LlmConfigEntry[]): LlmConfigEntry[] => {
     const seen = new Set<string>();
@@ -113,18 +87,16 @@ function migrate(raw: any): BaseMakerSettings {
         ? defaultLabel
         : DEFAULT_SETTINGS.defaultLlmLabel,
       subject: {
-        ...structuredClone(DEFAULT_SETTINGS.subject),
-        id: (legacyRaw.subjectId as any) || DEFAULT_SETTINGS.subject.id,
         authorFormatLastFirst: true,
       },
       experimental: structuredClone(DEFAULT_SETTINGS.experimental),
       formatting: structuredClone(DEFAULT_SETTINGS.formatting),
       image: structuredClone(DEFAULT_SETTINGS.image),
-      subjectFolders: sanitizeSubjectFolders((legacyRaw.subjectFolders as any) || [], new Set()),
       narrativeStyles: legacyRaw.narrativeStyles || structuredClone(DEFAULT_SETTINGS.narrativeStyles),
+      folders: structuredClone(DEFAULT_SETTINGS.folders),
+      validation: structuredClone(DEFAULT_SETTINGS.validation),
       version: CURRENT_SETTINGS_VERSION,
     };
-    ensureDefaultSubjectId(settings);
     return settings;
   };
 
@@ -133,58 +105,43 @@ function migrate(raw: any): BaseMakerSettings {
   }
 
   if (raw.version === 1) {
-    const v1 = raw as Version1Settings;
-    const entries: LlmConfigEntry[] = normalizeLabels([
-      {
-        label: 'openai',
-        vendor: 'openai',
-        model: v1.llm?.openaiModel || 'gpt-4o',
-        apiKey: v1.llm?.openaiApiKey || '',
-      },
-      {
-        label: 'gemini',
-        vendor: 'gemini',
-        model: v1.llm?.geminiModel || 'gemini-2.5-flash',
-        apiKey: v1.llm?.geminiApiKey || '',
-      },
-    ]);
-
-    const availableLabels = new Set(entries.map((entry) => entry.label));
-    const folderEntries = (v1.subjectFolders || []).map((entry) => {
-      const { vendor, ...rest } = entry;
-      const mapped: SubjectFolderEntry = {
-        subjectId: rest.subjectId as any,
-        notesFolder: rest.notesFolder || '',
-        photosFolder: rest.photosFolder || '',
-        narrativeStyleLabel: rest.narrativeStyleLabel,
-      };
-      if (vendor) {
-        const proposed = vendor === 'openai' ? 'openai' : 'gemini';
-        if (availableLabels.has(proposed)) {
-          mapped.llmLabel = proposed;
-        }
-      }
-      return mapped;
-    });
-
-    const defaultLabel = entries.find((entry) => entry.vendor === v1.llm.vendor)?.label;
-
-    const migrated: BaseMakerSettings = {
-      version: CURRENT_SETTINGS_VERSION,
-      llms: entries.length > 0 ? entries : structuredClone(DEFAULT_SETTINGS.llms),
-      defaultLlmLabel: defaultLabel || DEFAULT_SETTINGS.defaultLlmLabel,
-      subject: structuredClone(v1.subject),
-      experimental: structuredClone(v1.experimental),
-      formatting: structuredClone(v1.formatting),
-      image: structuredClone(v1.image),
-      subjectFolders: folderEntries,
-      narrativeStyles: v1.narrativeStyles || structuredClone(DEFAULT_SETTINGS.narrativeStyles),
-    };
-
-    ensureDefaultSubjectId(migrated);
-    return migrated;
+    // V1 was short-lived; migrating to V3 via V2 logic roughly
+    // Just reset to defaults for simplicity as V1 usage is negligible in this context
+    return structuredClone(DEFAULT_SETTINGS);
   }
 
+  if (raw.version === 2) {
+      const v2 = raw as BaseMakerSettingsV2;
+      const merged: BaseMakerSettings = {
+          ...structuredClone(DEFAULT_SETTINGS),
+          llms: v2.llms || structuredClone(DEFAULT_SETTINGS.llms),
+          defaultLlmLabel: v2.defaultLlmLabel || DEFAULT_SETTINGS.defaultLlmLabel,
+          experimental: v2.experimental || structuredClone(DEFAULT_SETTINGS.experimental),
+          formatting: v2.formatting || structuredClone(DEFAULT_SETTINGS.formatting),
+          image: v2.image || structuredClone(DEFAULT_SETTINGS.image),
+          narrativeStyles: v2.narrativeStyles || structuredClone(DEFAULT_SETTINGS.narrativeStyles),
+          subject: {
+              authorFormatLastFirst: v2.subject?.authorFormatLastFirst ?? DEFAULT_SETTINGS.subject.authorFormatLastFirst,
+          },
+          validation: structuredClone(DEFAULT_SETTINGS.validation),
+          version: CURRENT_SETTINGS_VERSION
+      };
+
+      // Migrate book folder settings if present
+      const bookFolders = v2.subjectFolders?.find(f => f.subjectId === 'books');
+      if (bookFolders) {
+          merged.folders = {
+              notes: bookFolders.notesFolder || DEFAULT_SETTINGS.folders.notes,
+              photos: bookFolders.photosFolder || DEFAULT_SETTINGS.folders.photos,
+              llmLabel: bookFolders.llmLabel,
+              narrativeStyleLabel: bookFolders.narrativeStyleLabel
+          };
+      }
+
+      return merged;
+  }
+
+  // Handle current version (re-merge to ensure new defaults)
   const merged: BaseMakerSettings = {
     ...structuredClone(DEFAULT_SETTINGS),
     ...(raw as BaseMakerSettings),
@@ -198,17 +155,14 @@ function migrate(raw: any): BaseMakerSettings {
   if (!merged.defaultLlmLabel || !labels.has(merged.defaultLlmLabel)) {
     merged.defaultLlmLabel = merged.llms[0]?.label || DEFAULT_LLM_LABEL;
   }
-  merged.subjectFolders = sanitizeSubjectFolders(merged.subjectFolders, labels);
   merged.narrativeStyles = merged.narrativeStyles || structuredClone(DEFAULT_SETTINGS.narrativeStyles);
-
-  ensureDefaultSubjectId(merged);
 
   return merged;
 }
 
 export class SettingsManager {
   private _settings: BaseMakerSettings = DEFAULT_SETTINGS;
-  constructor(private plugin: BaseMakerPlugin) {}
+  constructor(private plugin: NoteTakerAI) {}
 
   get data(): BaseMakerSettings { return this._settings; }
 

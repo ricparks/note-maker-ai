@@ -1,10 +1,9 @@
 // Versioned settings schema for BaseMaker
 // Central place for type definitions and defaults so other modules depend on a stable contract.
 
-export const CURRENT_SETTINGS_VERSION = 2;
+export const CURRENT_SETTINGS_VERSION = 3;
 
 export type LlmVendor = 'openai' | 'gemini' | 'openrouter';
-export type SubjectId = 'wine' | 'books' | 'travel'; // extended with travel
 
 export interface LlmConfigEntry {
   /** Unique label (max 12 chars, alphanumeric/underscores) that users select elsewhere. */
@@ -15,24 +14,15 @@ export interface LlmConfigEntry {
 }
 
 export interface SubjectSettings {
-  id: SubjectId;                 // active subject id
-  // Future: per-subject toggles (e.g., enableCoverEmbed for books) could live here
-  authorFormatLastFirst: boolean; // only applies to books currently
-  warnOnMismatch?: boolean;       // warn if AI predicts a different category (except Travel)
-  mismatchThreshold?: number;     // 0..1 threshold for warning
+  // Global subject-specific options (e.g., author format for books)
+  authorFormatLastFirst: boolean;
 }
 
-export interface SubjectFolderEntry {
-  subjectId: SubjectId;
-  notesFolder: string;   // vault-relative
-  photosFolder: string;  // vault-relative
+export interface FolderSettings {
+  notes: string;   // vault-relative
+  photos: string;  // vault-relative
   llmLabel?: string;     // optional association to a specific LLM config label
-  /** Optional association to a Narrative Style label (from settings.narrativeStyles[].label). */
-  narrativeStyleLabel?: string;
-}
-
-export interface FormattingSettings {
-  // Reserved for future generic formatting options
+  narrativeStyleLabel?: string; // optional default narrative style
 }
 
 export interface ExperimentalSettings {
@@ -45,30 +35,51 @@ export interface ImageSettings {
   keepOriginalAfterResize: boolean;
 }
 
-export interface BaseMakerSettingsV1 {
-  version: number;           // schema version
-  llm: any;
-  subject: SubjectSettings;
-  experimental: ExperimentalSettings;
-  formatting: FormattingSettings;
-  image: ImageSettings;
-  subjectFolders?: SubjectFolderEntry[];
-  narrativeStyles?: NarrativeStyleEntry[];
-}
-
+/** Legacy V2 settings for migration reference */
 export interface BaseMakerSettingsV2 {
-  version: number;
+  version: 2;
   llms: LlmConfigEntry[];
   defaultLlmLabel?: string;
-  subject: SubjectSettings;
+  subject: {
+      id: string;
+      authorFormatLastFirst: boolean;
+      warnOnMismatch?: boolean;
+      mismatchThreshold?: number;
+  };
   experimental: ExperimentalSettings;
-  formatting: FormattingSettings;
+  formatting: {};
   image: ImageSettings;
-  subjectFolders?: SubjectFolderEntry[];
+  subjectFolders?: Array<{
+      subjectId: string;
+      notesFolder: string;
+      photosFolder: string;
+      llmLabel?: string;
+      narrativeStyleLabel?: string;
+  }>;
   narrativeStyles?: NarrativeStyleEntry[];
 }
 
-export type BaseMakerSettings = BaseMakerSettingsV2;
+export interface ValidationSettings {
+  /** If true, warns when the AI predicts a category other than 'book' (e.g. wine, travel). */
+  warnOnMismatch: boolean;
+  /** Confidence threshold (0.0 - 1.0) above which to show the warning. */
+  mismatchThreshold: number;
+}
+
+export interface BaseMakerSettingsV3 {
+  version: 3;
+  llms: LlmConfigEntry[];
+  defaultLlmLabel?: string;
+  folders: FolderSettings;
+  subject: SubjectSettings;
+  validation: ValidationSettings;
+  experimental: ExperimentalSettings;
+  formatting: {};
+  image: ImageSettings;
+  narrativeStyles?: NarrativeStyleEntry[];
+}
+
+export type BaseMakerSettings = BaseMakerSettingsV3;
 
 // Narrative Style settings entries
 export interface NarrativeStyleEntry {
@@ -91,9 +102,14 @@ export const DEFAULT_SETTINGS: BaseMakerSettings = {
     }
   ],
   defaultLlmLabel: DEFAULT_LLM_LABEL,
+  folders: {
+      notes: 'Bases/Books',
+      photos: 'Bases/Books/photos'
+  },
   subject: {
-    id: 'travel',
     authorFormatLastFirst: true,
+  },
+  validation: {
     warnOnMismatch: true,
     mismatchThreshold: 0.7
   },
@@ -101,11 +117,9 @@ export const DEFAULT_SETTINGS: BaseMakerSettings = {
     enableDebugLogging: false
   },
   formatting: {
-  }
-  ,
-  image: {
-    keepOriginalAfterResize: false // previous behavior: delete original after resize
   },
-  subjectFolders: [],
+  image: {
+    keepOriginalAfterResize: false
+  },
   narrativeStyles: []
 };

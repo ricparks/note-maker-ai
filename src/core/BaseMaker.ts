@@ -29,10 +29,10 @@
  */
 import { TFile } from "obsidian";
 import { createProgressModal } from "../ui/progress/ProgressModal";
-import type BaseMakerPlugin from "../main";
+import type NoteTakerAI from "../main";
 import { PreparedImage } from "./image/PreparedImage";
 // Subject system
-import { getSubject } from "./subject";
+import { activeSubject } from "./subject";
 import type {
 	SubjectInfoBase,
 	SubjectNoteData,
@@ -83,15 +83,13 @@ const SECTION_HEADING_ALIASES: Record<string, string[]> = {
 export class BaseMaker {
 	private redoContext: RedoContext | null = null;
 
-	constructor(private plugin: BaseMakerPlugin) {}
+	constructor(private plugin: NoteTakerAI) {}
 
 	/**
-	 * Resolve the currently active subject definition from settings.
-	 * This is a getter to reflect live changes to the selected subject.
+	 * Resolve the currently active subject definition.
 	 */
 	private get subject() {
-		// Resolve active subject each time to reflect live setting changes.
-		return getSubject(this.plugin.settings.subject.id);
+		return activeSubject;
 	}
 
 	/**
@@ -203,39 +201,30 @@ export class BaseMaker {
 				}
 			} catch {}
 
-			// Guardrail: subject mismatch warning (skip for Travel)
+
+			// Validation Guardrail
 			try {
-				const subjId = (this.subject as any).id as string;
 				const guard = (parsed as any).meta || {};
-				const warnEnabled =
-					this.plugin.settings.subject.warnOnMismatch ?? true;
-				const threshold =
-					this.plugin.settings.subject.mismatchThreshold ?? 0.7;
-				const predicted = guard.predicted_category as
-					| string
-					| undefined;
-				const confidence =
-					typeof guard.confidence === "number"
-						? guard.confidence
-						: undefined;
-				const subjectMatch =
-					typeof guard.subject_match === "boolean"
-						? guard.subject_match
-						: true;
+				const warnEnabled = this.plugin.settings.validation.warnOnMismatch ?? true;
+				const threshold = this.plugin.settings.validation.mismatchThreshold ?? 0.7;
+				const predicted = guard.predicted_category as string | undefined;
+				const confidence = typeof guard.confidence === "number" ? guard.confidence : undefined;
+				const subjectMatch = typeof guard.subject_match === "boolean" ? guard.subject_match : true;
 				const reason = guard.reason as string | undefined;
-				const isMismatch =
-					subjId !== "travel" && subjectMatch === false;
+				
+				const isMismatch = subjectMatch === false;
+
 				if (isMismatch) {
 					const confStr = (confidence ?? 0).toFixed(2);
 					if ((confidence ?? 0) >= threshold && warnEnabled) {
 						const msg = `This looks like ${
-							predicted ?? "a different subject"
+							predicted ?? "something else"
 						} (${confStr}).${
 							reason ? " " + reason : ""
 						} Continue anyway?`;
 						const res = await confirm(this.plugin.app, msg);
 						if (res.dontShowAgain) {
-							this.plugin.settings.subject.warnOnMismatch = false;
+							this.plugin.settings.validation.warnOnMismatch = false;
 							await this.plugin.saveSettings();
 						}
 						if (!res.ok) {
@@ -243,7 +232,6 @@ export class BaseMaker {
 							return null;
 						}
 					} else {
-						// Below threshold: just log for transparency, do not block
 						progressModal.info(
 							`Note: Predicted ${
 								predicted ?? "different subject"
@@ -251,7 +239,9 @@ export class BaseMaker {
 						);
 					}
 				}
-			} catch {}
+			} catch (e) {
+				console.warn("Guardrail check failed", e);
+			}
 
 			// Post-parse: rename photo canonically if subject provides a naming hook
 			let finalPhotoFile = processedFile;
@@ -604,12 +594,13 @@ export class BaseMaker {
 		}
 	}
 
-	private getConfiguredNarrativeStyleLabel(): string {
-		const subjId = this.plugin.settings.subject.id as string;
-		const entry = (this.plugin.settings.subjectFolders || []).find(
-			(e) => e.subjectId === (subjId as any)
-		);
-		const label = entry?.narrativeStyleLabel?.trim();
+	private getNarrativeStyleLabel(properties?: Record<string, any>): string {
+		if (properties && typeof properties.narrative_style === "string") {
+			const label = properties.narrative_style.trim();
+			if (label.length > 0) return label;
+		}
+		
+		const label = this.plugin.settings.folders.narrativeStyleLabel?.trim();
 		const styles = this.plugin.settings.narrativeStyles || [];
 		if (label && label.length > 0) {
 			const exists = styles.some(
@@ -620,14 +611,6 @@ export class BaseMaker {
 			}
 		}
 		return "default";
-	}
-
-	private getNarrativeStyleLabel(properties?: Record<string, any>): string {
-		if (properties && typeof properties.narrative_style === "string") {
-			const label = properties.narrative_style.trim();
-			if (label.length > 0) return label;
-		}
-		return this.getConfiguredNarrativeStyleLabel();
 	}
 
 	private sanitizeNoteFilename(name: string): string {
@@ -829,69 +812,8 @@ export class BaseMaker {
 	}
 
 	private normalizeSectionSpacing(note: string): string {
-		const lines = note.replace(/\r\n/g, "\n").split("\n");
-		const normalized: string[] = [];
-		let frontmatterFenceCount = 0;
-		let inFrontmatter = false;
-		let prevWasHeading = false;
-
-		for (const rawLine of lines) {
-			const line = rawLine;
-			const trimmed = line.trim();
-			if (trimmed === "---") {
-				frontmatterFenceCount++;
-				inFrontmatter = frontmatterFenceCount === 1;
-				if (frontmatterFenceCount === 2) {
-					inFrontmatter = false;
-				}
-				normalized.push(line);
-				prevWasHeading = false;
-				continue;
-			}
-
-			if (inFrontmatter) {
-				normalized.push(line);
-				continue;
-			}
-
-			const isHeading = /^#{1,6}\s+/.test(line);
-			if (isHeading) {
-				while (
-					normalized.length > 0 &&
-					normalized[normalized.length - 1].trim().length === 0
-				) {
-					normalized.pop();
-				}
-				if (normalized.length > 0) {
-					normalized.push("");
-				}
-				normalized.push(line.trimEnd());
-				prevWasHeading = true;
-				continue;
-			}
-
-			if (trimmed.length === 0) {
-				if (prevWasHeading) {
-					continue;
-				}
-				normalized.push("");
-				prevWasHeading = false;
-				continue;
-			}
-
-			normalized.push(line);
-			prevWasHeading = false;
-		}
-
-		while (
-			normalized.length > 0 &&
-			normalized[normalized.length - 1].trim().length === 0
-		) {
-			normalized.pop();
-		}
-
-		const result = normalized.join("\n");
-		return result.endsWith("\n") ? result : `${result}\n`;
+		// Ensure max 1 empty line between sections
+		return note.replace(/\n{3,}/g, "\n\n");
 	}
 
 	private escapeRegExp(value: string): string {
@@ -902,6 +824,36 @@ export class BaseMaker {
 		const match = markdown.match(/\[Open in Maps\]\([^)]+\)/);
 		return match ? match[0] : null;
 	}
+
+	/**
+	 * Resolves output directories and optional LLM override for the current subject.
+	 */
+	private resolveSubjectDirsAndLlm(): {
+		notesDir: string;
+		photosDir: string;
+		llmLabelOverride?: string;
+	} {
+		const folders = this.plugin.settings.folders;
+		const defaultFolder = this.subject.directory || BASES_DEFAULT_DIR;
+
+		const notesDir = folders.notes?.trim() || defaultFolder;
+		const photosDir = folders.photos?.trim() || `${notesDir}/photos`;
+		const llmLabelOverride = folders.llmLabel?.trim() || undefined;
+
+		return { notesDir, photosDir, llmLabelOverride };
+	}
+
+	private resolveLlmConfig(llmLabelOverride?: string): LlmConfigEntry | null {
+		const { llms, defaultLlmLabel } = this.plugin.settings;
+		const lookup = (label?: string) =>
+			label ? llms.find((entry) => entry.label === label) : undefined;
+		const byOverride = lookup(llmLabelOverride?.trim());
+		if (byOverride) return byOverride;
+		const byDefault = lookup(defaultLlmLabel?.trim());
+		if (byDefault) return byDefault;
+		return llms[0] ?? null;
+	}
+
 	/**
 	 * Call the configured AI vendor with the provided base64 image and subject prompt.
 	 * Surfaces vendor selection in the progress UI, and returns the raw JSON (or null on failure).
@@ -936,17 +888,23 @@ export class BaseMaker {
 		// Resolve narrative style for the active subject (if any)
 		const narrativeLabel = isRedo && this.redoContext?.noteData
 			? this.getNarrativeStyleLabel(this.redoContext.noteData.properties)
-			: this.getConfiguredNarrativeStyleLabel();
-		const styles = this.plugin.settings.narrativeStyles || [];
-		const styleText = narrativeLabel
-			? styles.find((s) => s.label === narrativeLabel)?.narrativeStyle || ""
-			: "";
-		const finalStyle =
-			styleText && styleText.length > 0
-				? styleText
-				: "Neutral, objective, concise descriptive style; avoid embellishment.";
-		// Append global instruction line for narrative style usage
-		prompt = `${prompt}\nWhere specified, use the following narrative style: ${finalStyle} If the description for the value does not say that it should use the narrative style, don't use it for that value.`;
+			: this.getNarrativeStyleLabel();
+		
+		if (narrativeLabel && narrativeLabel !== "default") {
+			const styleEntry = (
+				this.plugin.settings.narrativeStyles || []
+			).find((s) => s.label === narrativeLabel);
+
+			if (styleEntry && styleEntry.narrativeStyle) {
+				prompt += `\n\nNARRATIVE STYLE:\n${styleEntry.narrativeStyle}`;
+				progressModal.info(`Applied narrative style: ${styleEntry.label}`);
+			}
+		}
+
+		console.log(
+			`[BaseMaker] Fetching subject JSON (redo=${isRedo}). Prompt length: ${prompt.length}`
+		);
+
 		const llmConfig = this.resolveLlmConfig(llmLabelOverride);
 		if (!llmConfig) {
 			progressModal.error(
@@ -956,6 +914,18 @@ export class BaseMaker {
 		}
 
 		const { vendor, model, apiKey, label: llmLabel } = llmConfig;
+		// Fallback for unset keys if user has them in env (mostly for dev/testing)
+		const effectiveApiKey = apiKey; // || process.env[`${vendor.toUpperCase()}_API_KEY`] || "";
+
+		if (!effectiveApiKey) {
+			progressModal.error(
+				`API Key missing for ${vendor} (model: ${model}). Please configure it in Settings.`
+			);
+			return null;
+		}
+
+		console.log(`[BaseMaker] Using LLM: ${vendor} / ${model} (${llmLabel})`);
+
 		let result: AiResult;
 		if (vendor === "openai") {
 			progressModal.info(
@@ -963,10 +933,10 @@ export class BaseMaker {
 			);
 			result = await callOpenAIClient({
 				vendor: "openai",
-				base64Image,
-				apiKey,
+				apiKey: effectiveApiKey,
 				model,
 				prompt,
+				base64Image
 			});
 		} else if (vendor === "gemini") {
 			progressModal.info(
@@ -974,10 +944,10 @@ export class BaseMaker {
 			);
 			result = await callGeminiClient({
 				vendor: "gemini",
-				base64Image,
-				apiKey,
+				apiKey: effectiveApiKey,
 				model,
 				prompt,
+				base64Image
 			});
 		} else if (vendor === "openrouter") {
 			progressModal.info(
@@ -988,10 +958,10 @@ export class BaseMaker {
 				: undefined;
 			result = await callOpenRouterClient({
 				vendor: "openrouter",
-				base64Image,
-				apiKey,
+				apiKey: effectiveApiKey,
 				model,
 				prompt,
+				base64Image,
 				referer,
 				clientTitle: this.plugin.manifest.name,
 			});
@@ -1001,43 +971,29 @@ export class BaseMaker {
 		}
 
 		if (!result.ok) {
-			// Centralized user feedback for now; could be enhanced with mapping later.
+			// Centralized user feedback 
 			progressModal.error(result.error);
 			console.error("AI call failed", result);
 			return null;
 		}
-		return result.data;
-	}
 
-	private resolveSubjectDirsAndLlm(): {
-		notesDir: string;
-		photosDir: string;
-		llmLabelOverride?: string;
-	} {
-		const subjId = this.plugin.settings.subject.id as any as string;
-		const entry = (this.plugin.settings.subjectFolders || []).find(
-			(e) => e.subjectId === subjId
-		);
-		const defaultNotes = this.subject.directory || BASES_DEFAULT_DIR;
-		const defaultPhotos = `${defaultNotes}/photos`;
-		if (!entry) {
-			return { notesDir: defaultNotes, photosDir: defaultPhotos };
+		// Success: data is already parsed object (or clean string depending on client, but we normalized to object in client)
+		// If data is a string, parse it.
+		if (typeof result.data === 'string') {
+			try {
+				const cleaned = result.data
+					.replace(/```json/g, "")
+					.replace(/```/g, "")
+					.trim();
+				return JSON.parse(cleaned);
+			} catch (e) {
+				console.error("JSON Parse Error", e, result.data);
+				progressModal.error("Failed to parse AI response as JSON.");
+				return null;
+			}
 		}
-		const notesDir = entry.notesFolder?.trim() || defaultNotes;
-		const photosDir = entry.photosFolder?.trim() || `${notesDir}/photos`;
-		const llmLabelOverride = entry.llmLabel?.trim() || undefined;
-		return { notesDir, photosDir, llmLabelOverride };
-	}
 
-	private resolveLlmConfig(llmLabelOverride?: string): LlmConfigEntry | null {
-		const { llms, defaultLlmLabel } = this.plugin.settings;
-		const lookup = (label?: string) =>
-			label ? llms.find((entry) => entry.label === label) : undefined;
-		const byOverride = lookup(llmLabelOverride?.trim());
-		if (byOverride) return byOverride;
-		const byDefault = lookup(defaultLlmLabel?.trim());
-		if (byDefault) return byDefault;
-		return llms[0] ?? null;
+		return result.data;
 	}
 
 	/**
@@ -1054,8 +1010,9 @@ export class BaseMaker {
 		progressModal: {
 			info: (m: string) => void;
 			error: (m: string) => void;
+			done: (success: boolean) => void;
 		},
-		exifData: import("./image/PreparedImage").ExifData | null
+		exifData: import("./image/PreparedImage").ExifData | null | undefined
 	) {
 		const fileName = this.sanitizeNoteFilename(
 			this.subject.getNoteFilename(info)
@@ -1086,7 +1043,7 @@ export class BaseMaker {
 		const coverFileName = originalPhotoFile.name; // Preserve original filename including extension
 
 		// Resolve narrative style label associated with the active subject
-		const narrativeStyleLabel = this.getConfiguredNarrativeStyleLabel();
+		const narrativeStyleLabel = this.getNarrativeStyleLabel();
 
 		const baseContent = this.subject.buildNote(info, {
 			photoLink,

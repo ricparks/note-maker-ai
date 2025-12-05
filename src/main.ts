@@ -3,11 +3,11 @@ import { BaseMakerSettingTab } from './ui/settings/SettingTab';
 import { SettingsManager } from './settings/SettingsManager';
 import type { BaseMakerSettings } from './settings/schema';
 import { RIBBON_ICON, RIBBON_TITLE } from './utils/constants';
-import { getSubject } from './core/subject';
+import { activeSubject } from './core/subject';
 import { BaseMaker } from './core/BaseMaker';
 
 // Main plugin class kept minimal; business logic lives in BaseMaker (core/BaseMaker.ts)
-export default class BaseMakerPlugin extends Plugin {
+export default class NoteTakerAI extends Plugin {
     settings!: BaseMakerSettings; // provided by manager after load
     settingsManager!: SettingsManager;
     core!: BaseMaker;
@@ -32,7 +32,8 @@ export default class BaseMakerPlugin extends Plugin {
 
     // Render or re-render the ribbon icon based on the active subject
     private renderRibbon() {
-        const subject = getSubject(this.settings.subject.id);
+        // Single subject mode: explicit activeSubject
+        const subject = activeSubject;
         const icon = subject.ribbonIcon || RIBBON_ICON;
         const title = subject.ribbonTitle || RIBBON_TITLE;
 
