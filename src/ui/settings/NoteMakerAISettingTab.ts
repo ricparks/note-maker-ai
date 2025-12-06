@@ -80,6 +80,22 @@ export class NoteMakerAISettingTab extends PluginSettingTab {
 					await this.plugin.saveSettings();
 				});
 			});
+		
+		new Setting(containerEl)
+			.setName("Prompt Additions File")
+			.setDesc("A text file (in your notes folder or absolute path) to append to the system prompt.")
+			.addText((text) => {
+				text.setPlaceholder("e.g. BookPrompt.md")
+					.setValue(this.plugin.settings.folders.addedPromptLocation || "")
+					.onChange(async (value) => {
+						this.plugin.settings.folders.addedPromptLocation = value.trim();
+						await this.plugin.saveSettings();
+					});
+				new FolderSuggest(this.app, text.inputEl, async (picked) => {
+					this.plugin.settings.folders.addedPromptLocation = picked;
+					await this.plugin.saveSettings();
+				});
+			});
 
 		// LLM CONFIGURATION
 		const ensureLlmArray = () => {

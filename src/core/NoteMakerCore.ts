@@ -309,9 +309,15 @@ export class NoteMakerCore {
 		if (exifFromNote) {
 			promptContext.exifData = exifFromNote;
 		}
+		const { notesDir } = this.resolveSubjectDirsAndLlm();
+		promptContext.app = this.plugin.app;
+		promptContext.additionalPromptPath = this.plugin.settings.folders.addedPromptLocation;
+		promptContext.notesDir = notesDir;
+		promptContext.logInfo = (m) => progressModal.info(m);
+
 		const prompt =
 			typeof (this.subject as any).getPrompt === "function"
-				? (this.subject as any).getPrompt(promptContext)
+				? await (this.subject as any).getPrompt(promptContext)
 				: this.subject.prompt;
 		console.log("[NoteMakerAI] Redo prompt:", prompt);
 		const photoFile = this.resolveRedoPhoto(noteData, file, content);
@@ -879,9 +885,15 @@ export class NoteMakerCore {
 			if (exifData) {
 				context.exifData = exifData;
 			}
+			const { notesDir } = this.resolveSubjectDirsAndLlm();
+			context.app = this.plugin.app;
+			context.additionalPromptPath = this.plugin.settings.folders.addedPromptLocation;
+			context.notesDir = notesDir;
+			context.logInfo = (m) => progressModal.info(m);
+
 			prompt =
 				typeof (this.subject as any).getPrompt === "function"
-					? (this.subject as any).getPrompt(context)
+					? await (this.subject as any).getPrompt(context)
 					: this.subject.prompt;
 		}
 

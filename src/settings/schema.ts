@@ -22,6 +22,7 @@ export interface FolderSettings {
   photos: string;  // vault-relative
   llmLabel?: string;     // optional association to a specific LLM config label
   narrativeStyleLabel?: string; // optional default narrative style
+  addedPromptLocation?: string; // optional path to a text file appended to the prompt
 }
 
 export interface ExperimentalSettings {
@@ -59,12 +60,7 @@ export interface NoteMakerAISettings {
   llms: LlmConfigEntry[];
   defaultLlmLabel?: string;
 
-  folders: {
-    notes: string;
-    photos: string;
-    llmLabel?: string;
-    narrativeStyleLabel?: string;
-  };
+  folders: FolderSettings;
 
   /** Global "Keep original after resize" setting. */
   image?: ImageSettings;
@@ -89,6 +85,7 @@ export const DEFAULT_SETTINGS: NoteMakerAISettings = {
   folders: {
     notes: SUBJECT_DIR,
     photos: SUBJECT_PHOTOS_DIR,
+    addedPromptLocation: "BookPrompt.md",
   },
   image: {
     keepOriginalAfterResize: false,

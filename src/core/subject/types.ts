@@ -36,6 +36,10 @@ export interface SubjectExistingNoteContext {
 export interface SubjectPromptContext {
   exifData?: import('../image/PreparedImage').ExifData;
   noteData?: SubjectNoteData;
+  app?: import('obsidian').App;
+  additionalPromptPath?: string;
+  notesDir?: string;
+  logInfo?: (message: string) => void;
 }
 
 /**
@@ -47,7 +51,7 @@ export interface SubjectDefinition<T extends SubjectInfoBase = SubjectInfoBase> 
   id: string;                 // stable identifier (e.g., 'wine')
   prompt: string;             // AI prompt to send
   /** Optional: Build a prompt dynamically based on context (e.g., EXIF or parsed note data). If provided, takes precedence over 'prompt'. */
-  getPrompt?(context: SubjectPromptContext): string;
+  getPrompt?(context: SubjectPromptContext): string | Promise<string>;
   getNoteFilename(info: T): string;  // derive filename (without extension)
   buildNote(info: T, context: { photoLink?: string; coverFileName?: string; exifData?: import('../image/PreparedImage').ExifData; narrativeStyleLabel?: string }): string; // build markdown note
   parse(aiJson: any): T;      // map AI JSON to typed structure with fallbacks
