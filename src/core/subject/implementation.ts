@@ -146,7 +146,7 @@ export const bookSubject: SubjectDefinition<BookSubjectInfo> = {
    * Render markdown content for a book, including frontmatter and sections.
    * Summary and themes appear as sections (not frontmatter properties).
    */
-  buildNote(info, { coverFileName, exifData, narrativeStyleLabel }) {
+  buildNote(info, { coverFileName, exifData }) {
     const f = info.fields;
     const rawAuthor = (f.author || info.producer || '').toString();
     const coverProp = coverFileName ? `"[[${coverFileName}]]"` : '""';
@@ -162,7 +162,6 @@ publisher: "${(f.publisher || '').toString().replace(/"/g, '\\"')}"
 publicationDate: "${(f.publicationDate || '').toString().replace(/"/g, '\\"')}"
 isbn: "${(f.isbn || '').toString().replace(/"/g, '\\"')}"
 genres: "${(f.genres || '').toString().replace(/"/g, '\\"')}"
-narrative_style: "${(narrativeStyleLabel || '').toString().replace(/"/g, '\\"')}"
 date_read: ""
 rating: ""
 photo: ${coverProp}

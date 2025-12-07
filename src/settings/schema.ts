@@ -21,7 +21,6 @@ export interface FolderSettings {
   notes: string;   // vault-relative
   photos: string;  // vault-relative
   llmLabel?: string;     // optional association to a specific LLM config label
-  narrativeStyleLabel?: string; // optional default narrative style
   addedPromptLocation?: string; // optional path to a text file appended to the prompt
 }
 
@@ -42,17 +41,6 @@ export interface ValidationSettings {
   mismatchThreshold: number;
 }
 
-// Narrative Style settings entries
-export interface NarrativeStyleEntry {
-  /** Unique label for narrative style (alphanumeric, max 8 chars). */
-  label: string;
-  /** Narrative style description (max 60 chars). */
-  narrativeStyle: string;
-}
-
-// ------------------------------------------------------------------
-// Settings V3 (Latest)
-// ------------------------------------------------------------------
 // ------------------------------------------------------------------
 // Settings V3 (Latest)
 // ------------------------------------------------------------------
@@ -64,8 +52,6 @@ export interface NoteMakerAISettings {
 
   /** Global "Keep original after resize" setting. */
   image?: ImageSettings;
-  /** Custom narrative styles. */
-  narrativeStyles?: NarrativeStyleEntry[];
   /** Validation guardrails. */
   validation: ValidationSettings;
 }
@@ -90,7 +76,6 @@ export const DEFAULT_SETTINGS: NoteMakerAISettings = {
   image: {
     keepOriginalAfterResize: false,
   },
-  narrativeStyles: [],
   validation: {
     warnOnMismatch: true,
     mismatchThreshold: 0.7,

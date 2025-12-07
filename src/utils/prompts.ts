@@ -14,7 +14,7 @@ Extract the following fields if possible:
 - isbn: ISBN-10 or ISBN-13; prefer ISBN-13 if both are present. Return digits only (remove hyphens and spaces). If unknown, return empty string.
 - genres: Comma-separated list of 1-5 genres
 - themes: Short comma-separated list of 1-6 thematic concepts
-- summary: 2-4 sentence neutral summary (avoid spoilers). Use the narrative style below.
+- summary: 2-4 sentence neutral summary (avoid spoilers).
 
 If a field is unknown, use an empty string for text fields and 0 for numeric fields (only 'volume' uses numeric). Do not hallucinate beyond visually / famously verifiable information.
 Also include lightweight classification guard fields to help verify the chosen subject without extra requests:

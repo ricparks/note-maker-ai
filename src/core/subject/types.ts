@@ -53,7 +53,7 @@ export interface SubjectDefinition<T extends SubjectInfoBase = SubjectInfoBase> 
   /** Optional: Build a prompt dynamically based on context (e.g., EXIF or parsed note data). If provided, takes precedence over 'prompt'. */
   getPrompt?(context: SubjectPromptContext): string | Promise<string>;
   getNoteFilename(info: T): string;  // derive filename (without extension)
-  buildNote(info: T, context: { photoLink?: string; coverFileName?: string; exifData?: import('../image/PreparedImage').ExifData; narrativeStyleLabel?: string }): string; // build markdown note
+  buildNote(info: T, context: { photoLink?: string; coverFileName?: string; exifData?: import('../image/PreparedImage').ExifData }): string; // build markdown note
   parse(aiJson: any): T;      // map AI JSON to typed structure with fallbacks
   // Optional per-subject note directory (relative inside vault). If omitted, fallback constant used.
   directory?: string;

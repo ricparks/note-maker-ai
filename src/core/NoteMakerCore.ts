@@ -94,48 +94,138 @@ export class NoteMakerCore {
 	}
 
 	/**
-	 * Main entry point: processes the active file into a subject note.
-	 * Steps (image branch):
-	 * 1) Validate that the active file is an image.
-	 * 2) Prepare the image (move or resize) and capture base64 for the note.
-	 * 3) Produce a shrunk in-memory JPEG for AI (<=512px) to reduce cost.
-	 * 4) Call the configured AI vendor and parse result with the subject.
-	 * 5) Optionally rename the photo canonically, then create and open the note.
-	 * Markdown handling is introduced in the redo feature and branches earlier.
-	 * @returns base64 string actually used for the AI call (or null on early failure)
+	 * Main entry point triggered by UI (Ribbon/Command).
+	 * Checks for multiple selected files in the explorer first.
+	 * If multiple items (images or markdown) are found, confirms and processes them in batch.
+	 * If single or no selection, falls back to processing the active file.
 	 */
-	async processActiveFile(): Promise<string | null> {
+	async processSelection(): Promise<void> {
+		this.redoContext = null;
+
+		// 1. Try to detect multiple selection from File Explorer (Internal API heuristic)
+		const selection = this.getExplorerSelection();
+		
+		const images = selection.filter(f => IMAGE_EXTENSIONS.includes((f.extension || "").toLowerCase()));
+		const markdowns = selection.filter(f => (f.extension || "").toLowerCase() === "md");
+		const totalCount = images.length + markdowns.length;
+
+		if (totalCount > 1) {
+			// Confirmation message
+			const parts: string[] = [];
+			if (images.length > 0) parts.push(`${images.length} photo${images.length > 1 ? "s" : ""}`);
+			if (markdowns.length > 0) parts.push(`${markdowns.length} note${markdowns.length > 1 ? "s" : ""}`);
+			
+			const msg = `Process ${parts.join(" and ")}?`;
+			const res = await confirm(this.plugin.app, msg);
+			if (!res.ok) return;
+
+			// Batch Process
+			// We process sequentially to avoid overwhelming the system/UI
+			for (const file of images) {
+				await this.processImageFile(file);
+			}
+			for (const file of markdowns) {
+				const progressModal = createProgressModal(this.plugin.app);
+				await this.processActiveMarkdown(file, progressModal);
+			}
+			return;
+		}
+
+		// 2. Fallback: Standard single-file active processing
+		return this.processActiveFile();
+	}
+
+	/**
+	 * Attempt to obtain the currently selected files from the file explorer view.
+	 * Uses heuristics based on internal Obsidian view state (checking css classes).
+	 * Returns empty array if detection fails or API is incompatible.
+	 */
+	private getExplorerSelection(): TFile[] {
+		try {
+			const leaves = this.plugin.app.workspace.getLeavesOfType("file-explorer");
+			if (leaves.length === 0) return [];
+			const view = leaves[0].view as any;
+			
+			// Heuristic: Iterate fileItems and check for "is-selected" class
+			if (view && view.fileItems) {
+				const selectedFiles: TFile[] = [];
+				// fileItems is usually a map of path -> FileItem
+				for (const path in view.fileItems) {
+					const item = view.fileItems[path];
+					if (!item) continue;
+					
+					// Check for selection class on the title/self element
+					// 'is-selected' is usually applied to the nav-file-title or specific container
+					const el = item.titleEl ?? item.selfEl ?? item.el;
+					if (el && el instanceof HTMLElement) {
+						if (el.classList.contains("is-selected") && item.file instanceof TFile) {
+							selectedFiles.push(item.file);
+						}
+					}
+				}
+				return selectedFiles;
+			}
+		} catch (e) {
+			console.warn("[NoteMakerAI] Selection detection failed (graceful fallback):", e);
+		}
+		return [];
+	}
+
+	/**
+	 * Original entry point, kept for API compatibility and fallback.
+	 * Processes the currently active workspace file.
+	 */
+	async processActiveFile(): Promise<void> {
 		this.redoContext = null;
 		const activeFile = this.plugin.app.workspace.getActiveFile();
 
-		const progressModal = createProgressModal(this.plugin.app);
 		if (!activeFile) {
+			const progressModal = createProgressModal(this.plugin.app);
 			progressModal.error(NO_ACTIVE_FILE_NOTICE);
 			progressModal.done(false);
-			return null;
+			return;
 		}
 
-		const extension = (activeFile.extension || "").toLowerCase();
+		await this.processFile(activeFile);
+	}
+
+	/**
+	 * Unified router for processing a single file (Image or Markdown).
+	 */
+	private async processFile(file: TFile): Promise<string | null> {
+		const extension = (file.extension || "").toLowerCase();
 		const isImage = IMAGE_EXTENSIONS.includes(extension);
 		const isMarkdown = extension === "md";
 
 		if (!isImage && !isMarkdown) {
+			const progressModal = createProgressModal(this.plugin.app);
 			progressModal.error(NOT_IMAGE_NOTICE);
 			progressModal.done(false);
 			return null;
 		}
 
 		if (isMarkdown) {
-			await this.processActiveMarkdown(activeFile, progressModal);
+			const progressModal = createProgressModal(this.plugin.app);
+			await this.processActiveMarkdown(file, progressModal);
 			return null;
 		}
 
-		progressModal.info(PROCESSING_NOTICE(activeFile.name));
+		// Is Image
+		return this.processImageFile(file);
+	}
+
+	/**
+	 * Extracted core logic for processing a single image file.
+	 * Returns the base64 string sent to AI, or null on failure.
+	 */
+	private async processImageFile(file: TFile): Promise<string | null> {
+		const progressModal = createProgressModal(this.plugin.app);
+		progressModal.info(PROCESSING_NOTICE(file.name));
 
 		progressModal.info("Preparing image...");
 		const { notesDir, photosDir, llmLabelOverride } =
 			this.resolveSubjectDirsAndLlm();
-		const preparedImage = new PreparedImage(this.plugin.app, activeFile, {
+		const preparedImage = new PreparedImage(this.plugin.app, file, {
 			subjectDir: notesDir,
 			photosDir: photosDir,
 			maxW: 750,
@@ -294,13 +384,7 @@ export class NoteMakerCore {
 			content,
 			frontmatter,
 		});
-		const narrativeStyleLabel = this.getNarrativeStyleLabel(noteData.properties);
-		if (
-			typeof noteData.properties?.narrative_style !== "string" ||
-			noteData.properties.narrative_style.trim().length === 0
-		) {
-			noteData.properties.narrative_style = narrativeStyleLabel;
-		}
+
 		const exifFromNote = this.extractExifFromProperties(noteData.properties);
 		const promptContext: SubjectPromptContext = {};
 		if (noteData) {
@@ -319,6 +403,13 @@ export class NoteMakerCore {
 			typeof (this.subject as any).getPrompt === "function"
 				? await (this.subject as any).getPrompt(promptContext)
 				: this.subject.prompt;
+		
+		// DEBUG logging for prompt generation
+		console.log(`[NoteMakerAI] Processing active markdown: ${file.name}`);
+		const additions = noteData.sections['Prompt Additions'] || noteData.sections['PA'] || noteData.sections['pa'];
+		console.log(`[NoteMakerAI] Extracted PA for ${file.name}:`, additions ? additions.slice(0, 50) + "..." : "None");
+		console.log(`[NoteMakerAI] Full prompt key len: ${prompt.length}`);
+		
 		console.log("[NoteMakerAI] Redo prompt:", prompt);
 		const photoFile = this.resolveRedoPhoto(noteData, file, content);
 		if (!photoFile) {
@@ -358,11 +449,7 @@ export class NoteMakerCore {
 		} else {
 			progressModal.info("Parsed markdown note");
 		}
-		progressModal.info(
-			narrativeStyleLabel
-				? `Prepared redo prompt (style: ${narrativeStyleLabel})`
-				: "Prepared redo prompt"
-		);
+		progressModal.info("Prepared redo prompt");
 
 		progressModal.info("Fetching redo subject data...");
 		const { llmLabelOverride } = this.resolveSubjectDirsAndLlm();
@@ -532,16 +619,16 @@ export class NoteMakerCore {
 			progressModal
 		);
 		this.redoContext.file = file;
-		const narrativeStyle = this.getNarrativeStyleLabel(noteData.properties);
+		
 		const photoLink = this.plugin.app.fileManager
 			.generateMarkdownLink(photoFile, file.path)
 			.replace(/^!/, "");
 		const coverFileName = photoFile.name;
+
 		const baseContent = this.subject.buildNote(parsed, {
 			photoLink,
 			coverFileName,
 			exifData,
-			narrativeStyleLabel: narrativeStyle,
 		});
 
 		const cleanSection = (body: string | undefined): string => {
@@ -600,24 +687,7 @@ export class NoteMakerCore {
 		}
 	}
 
-	private getNarrativeStyleLabel(properties?: Record<string, any>): string {
-		if (properties && typeof properties.narrative_style === "string") {
-			const label = properties.narrative_style.trim();
-			if (label.length > 0) return label;
-		}
-		
-		const label = this.plugin.settings.folders.narrativeStyleLabel?.trim();
-		const styles = this.plugin.settings.narrativeStyles || [];
-		if (label && label.length > 0) {
-			const exists = styles.some(
-				(style) => style.label?.trim() === label
-			);
-			if (exists) {
-				return label;
-			}
-		}
-		return "default";
-	}
+
 
 	private sanitizeNoteFilename(name: string): string {
 		const raw = (name ?? "")
@@ -897,21 +967,7 @@ export class NoteMakerCore {
 					: this.subject.prompt;
 		}
 
-		// Resolve narrative style for the active subject (if any)
-		const narrativeLabel = isRedo && this.redoContext?.noteData
-			? this.getNarrativeStyleLabel(this.redoContext.noteData.properties)
-			: this.getNarrativeStyleLabel();
-		
-		if (narrativeLabel && narrativeLabel !== "default") {
-			const styleEntry = (
-				this.plugin.settings.narrativeStyles || []
-			).find((s) => s.label === narrativeLabel);
 
-			if (styleEntry && styleEntry.narrativeStyle) {
-				prompt += `\n\nNARRATIVE STYLE:\n${styleEntry.narrativeStyle}`;
-				progressModal.info(`Applied narrative style: ${styleEntry.label}`);
-			}
-		}
 
 		console.log(
 			`[NoteTakerAI] Fetching subject JSON (redo=${isRedo}). Prompt length: ${prompt.length}`
@@ -1054,14 +1110,10 @@ export class NoteMakerCore {
 			.replace(/^!/, "");
 		const coverFileName = originalPhotoFile.name; // Preserve original filename including extension
 
-		// Resolve narrative style label associated with the active subject
-		const narrativeStyleLabel = this.getNarrativeStyleLabel();
-
 		const baseContent = this.subject.buildNote(info, {
 			photoLink,
 			coverFileName,
 			exifData: exifData || undefined,
-			narrativeStyleLabel,
 		});
 		const content = this.normalizeSectionSpacing(baseContent);
 

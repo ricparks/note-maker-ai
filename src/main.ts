@@ -47,14 +47,14 @@ export default class NoteMakerAI extends Plugin {
             } catch (e) {
                 // Fallback: if updating fails for any reason, recreate the element
                 try { (this.ribbonEl as any)?.remove?.(); } catch {}
-                this.ribbonEl = this.addRibbonIcon(icon, title, () => this.core.processActiveFile());
+                this.ribbonEl = this.addRibbonIcon(icon, title, () => this.core.processSelection());
             }
             return;
         }
 
         // First render: create the ribbon icon and register the click handler
         this.ribbonEl = this.addRibbonIcon(icon, title, () => {
-            this.core.processActiveFile();
+            this.core.processSelection();
         });
     }
 }
