@@ -49,7 +49,6 @@ import {
 	PROCESSING_NOTICE,
 	SUCCESS_FETCHED_SUBJECT,
 	FAILED_GET_SUBJECT,
-	NOTE_EXISTS_NOTICE,
 	NOTE_CREATED_NOTICE,
 	COULD_NOT_CREATE_NOTE,
 	IMAGE_EXTENSIONS,
@@ -72,7 +71,6 @@ type RedoContext = {
 	prompt: string;
 	photoFile: TFile;
 	photoBase64: string;
-	mapLink?: string | null;
 	rawSubject?: any;
 };
 
@@ -80,6 +78,11 @@ const SECTION_HEADING_ALIASES: Record<string, string[]> = {
 	"prompt additions": ["pa"],
 	pa: ["prompt additions"],
 };
+
+// Image dimension limits for processing
+const NOTE_IMAGE_MAX_WIDTH = 750;
+const NOTE_IMAGE_MAX_HEIGHT = 1000;
+const AI_IMAGE_MAX_DIM = 512;
 
 export class NoteMakerCore {
 	private redoContext: RedoContext | null = null;
@@ -228,9 +231,9 @@ export class NoteMakerCore {
 		const preparedImage = new PreparedImage(this.plugin.app, file, {
 			subjectDir: notesDir,
 			photosDir: photosDir,
-			maxW: 750,
-			maxH: 1000,
-			aiMax: 512,
+			maxW: NOTE_IMAGE_MAX_WIDTH,
+			maxH: NOTE_IMAGE_MAX_HEIGHT,
+			aiMax: AI_IMAGE_MAX_DIM,
 			keepOriginal: !!this.plugin.settings.image?.keepOriginalAfterResize,
 			logger: {
 				info: (m) => progressModal.info(m),
@@ -432,8 +435,6 @@ export class NoteMakerCore {
 			return;
 		}
 
-		const mapLink = this.extractMapLink(content);
-
 		this.redoContext = {
 			file,
 			noteData,
@@ -442,7 +443,6 @@ export class NoteMakerCore {
 			prompt,
 			photoFile,
 			photoBase64,
-			mapLink,
 		};
 		if (noteData.logSummary) {
 			progressModal.info(noteData.logSummary);
@@ -612,7 +612,7 @@ export class NoteMakerCore {
 			progressModal.done(false);
 			return;
 		}
-		const { noteData, photoFile, exifData, mapLink } = this.redoContext;
+		const { noteData, photoFile, exifData } = this.redoContext;
 		let file = await this.renameRedoFileIfNeeded(
 			this.redoContext.file,
 			parsed,
@@ -630,25 +630,6 @@ export class NoteMakerCore {
 			coverFileName,
 			exifData,
 		});
-
-		const cleanSection = (body: string | undefined): string => {
-			if (!body) return "";
-			const targetEmbed = coverFileName ? `![[${coverFileName}]]` : null;
-			const trimmedMap = mapLink?.trim();
-			const lines = body.split(/\r?\n/);
-			const filtered = lines.filter((line) => {
-				const trimmed = line.trim();
-				if (!trimmed) return true;
-				if (targetEmbed && trimmed === targetEmbed) return false;
-				if (trimmedMap && trimmed === trimmedMap) return false;
-				if (trimmed.startsWith("[Open in Maps](")) return false;
-				return true;
-			});
-			while (filtered.length > 0 && filtered[filtered.length - 1].trim().length === 0) {
-				filtered.pop();
-			}
-			return filtered.join("\n");
-		};
 
 		const sections = { ...noteData.sections };
 		const myNotesKey = this.findSectionKey(sections, "My Notes");
@@ -892,11 +873,6 @@ export class NoteMakerCore {
 		return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 	}
 
-	private extractMapLink(markdown: string): string | null {
-		const match = markdown.match(/\[Open in Maps\]\([^)]+\)/);
-		return match ? match[0] : null;
-	}
-
 	/**
 	 * Resolves output directories and optional LLM override for the current subject.
 	 */
@@ -1088,8 +1064,12 @@ export class NoteMakerCore {
 		if (!abstract) {
 			try {
 				await this.plugin.app.vault.createFolder(dir);
-			} catch {
-				/* ignore if exists now */
+			} catch (e: any) {
+				// Only ignore "folder already exists" errors; re-check to be safe
+				const existsNow = this.plugin.app.vault.getAbstractFileByPath(dir);
+				if (!existsNow) {
+					console.error(`[NoteMakerAI] Failed to create folder "${dir}":`, e);
+				}
 			}
 		}
 		// Collision-safe note path generation: append numeric suffix if needed

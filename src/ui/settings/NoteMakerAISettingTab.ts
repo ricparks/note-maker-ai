@@ -108,7 +108,7 @@ export class NoteMakerAISettingTab extends PluginSettingTab {
 		containerEl.createEl("h3", { text: "LLMs" });
 		containerEl.createEl("hr");
 		const llmWrap = containerEl.createEl("div", {
-			cls: "notetakerai-llm-rows",
+			cls: "notemaker-llm-rows",
 		});
 
 		let defaultLlmSelectEl: HTMLSelectElement | null = null;
@@ -345,8 +345,8 @@ export class NoteMakerAISettingTab extends PluginSettingTab {
 				};
 
 				const delBtn = row.createEl("button", { text: "×" });
-				delBtn.addClass("notetakerai-btn-ghost-danger");
-				delBtn.addClass("notetakerai-icon-btn");
+				delBtn.addClass("notemaker-btn-ghost-danger");
+				delBtn.addClass("notemaker-icon-btn");
 				delBtn.style.marginLeft = "auto";
 				delBtn.setAttr("aria-label", "Remove LLM");
 				delBtn.title = "Remove LLM";

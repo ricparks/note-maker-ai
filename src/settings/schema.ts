@@ -12,21 +12,11 @@ export interface LlmConfigEntry {
   apiKey: string;
 }
 
-export interface SubjectSettings {
-  // Global subject-specific options (e.g., author format for books)
-  authorFormatLastFirst: boolean;
-}
-
 export interface FolderSettings {
   notes: string;   // vault-relative
   photos: string;  // vault-relative
   llmLabel?: string;     // optional association to a specific LLM config label
   addedPromptLocation?: string; // optional path to a text file appended to the prompt
-}
-
-export interface ExperimentalSettings {
-  // Feature flags for in-progress ideas
-  enableDebugLogging: boolean;
 }
 
 export interface ImageSettings {

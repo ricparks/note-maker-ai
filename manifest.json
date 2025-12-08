@@ -1,9 +1,9 @@
 {
 	"id": "note-maker-ai",
 	"name": "NoteMakerAI",
-	"version": "0.1.19",
+	"version": "0.1.20",
 	"minAppVersion": "0.15.0",
-	"description": "Obsidian plugin to create notes for bases.",
+	"description": "Create structured notes from photos using AI. Analyze book covers and extract metadata automatically.",
 	"author": "Richard Parks",
 	"authorUrl": "https://elementalekos.com",
 	"fundingUrl": "https://elementalekos.com",

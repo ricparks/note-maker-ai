@@ -21,7 +21,6 @@ export const BOOK_PHOTO_FALLBACK_BASENAME = 'image';
 export const BOOK_SECTION_MY_NOTES = 'My Notes';
 export const BOOK_SECTION_SUMMARY = 'Summary';
 export const BOOK_SECTION_THEMES = 'Themes';
-export const BOOK_SECTION_NOTES = 'Notes';
 
 // --- Book subject prompt ---
 /** AI prompt for extracting book metadata from a cover image. */

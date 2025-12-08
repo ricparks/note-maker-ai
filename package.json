@@ -1,7 +1,7 @@
 {
 	"name": "note-maker-ai",
 	"version": "1.0.0",
-	"description": "Obsidan plugin for AI creation of notes for bases",
+	"description": "Obsidian plugin for creating structured notes from photos using AI.",
 	"main": "main.js",
 	"scripts": {
 		"dev": "node esbuild.config.mjs",

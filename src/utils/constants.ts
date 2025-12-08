@@ -23,9 +23,7 @@ export const UNKNOWN_VENDOR_ERROR = "Error: Unknown LLM vendor selected.";
 // Small helper templates for dynamic messages
 export const PROCESSING_NOTICE = (fileName: string) => `Processing ${fileName}...`;
 export const FAILED_READ_IMAGE_NOTICE = (fileName: string) => `Failed to read the image file: ${fileName}.`;
-export const NOTE_EXISTS_NOTICE = (fileName: string) => `Note "${fileName}.md" already exists. Aborting.`;
 export const NOTE_CREATED_NOTICE = (fileName: string) => `Successfully created note: ${fileName}.md`;
 
-// Other
-export const IMAGE_EXTENSIONS = ["jpg", "png"];
-
+// Supported image extensions (used for file type detection)
+export const IMAGE_EXTENSIONS = ["jpg", "jpeg", "png"];
