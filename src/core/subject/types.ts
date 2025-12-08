@@ -53,7 +53,36 @@ export interface SubjectDefinition<T extends SubjectInfoBase = SubjectInfoBase> 
   /** Optional: Build a prompt dynamically based on context (e.g., EXIF or parsed note data). If provided, takes precedence over 'prompt'. */
   getPrompt?(context: SubjectPromptContext): string | Promise<string>;
   getNoteFilename(info: T): string;  // derive filename (without extension)
-  buildNote(info: T, context: { photoLink?: string; coverFileName?: string; exifData?: import('../image/PreparedImage').ExifData }): string; // build markdown note
+  /**
+   * Build the complete markdown content for a note, including YAML frontmatter and sections.
+   * 
+   * ## Framework Sections (for redo support)
+   * 
+   * To enable the redo feature (regenerating AI content while preserving user edits), 
+   * your note template should include these framework-level sections:
+   * 
+   * - **`#### My Notes`** (required for redo): User content in this section is preserved
+   *   when the note is regenerated. Without this section, users lose their personal notes
+   *   on redo.
+   * 
+   * - **`#### Prompt Additions`** (optional, alias: `PA`): If present, content here is
+   *   appended to the AI prompt during redo, allowing users to guide regeneration
+   *   (e.g., "Focus more on the author's background").
+   * 
+   * ## Subject-Specific Sections
+   * 
+   * Beyond the framework sections, define any sections appropriate for your subject.
+   * These will be regenerated from AI output on each redo:
+   * 
+   * - Books: `Summary`, `Themes`
+   * - Wine: `Tasting Notes`, `Pairings`
+   * - Travel: `Description`, `Points of Interest`
+   * 
+   * @param info - Parsed subject data from `parse()`
+   * @param context - Optional photo/EXIF context for embedding images
+   * @returns Complete markdown string including frontmatter and all sections
+   */
+  buildNote(info: T, context: { photoLink?: string; coverFileName?: string; exifData?: import('../image/PreparedImage').ExifData }): string;
   parse(aiJson: any): T;      // map AI JSON to typed structure with fallbacks
   // Optional per-subject note directory (relative inside vault). If omitted, fallback constant used.
   directory?: string;

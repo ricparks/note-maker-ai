@@ -10,7 +10,7 @@ export class ProgressModal extends Modal {
   }
 
   onOpen() {
-    this.titleEl.setText('BaseMaker Processing');
+    this.titleEl.setText('NoteMakerAI Processing');
     this.render();
   }
 
@@ -36,9 +36,9 @@ export class ProgressModal extends Modal {
     const el = this.contentEl;
     el.empty();
 
-    const list = el.createEl('div', { cls: 'basemaker-progress-log' });
+    const list = el.createEl('div', { cls: 'notemaker-progress-log' });
     this.messages.forEach(m => {
-      const line = list.createEl('div', { cls: 'basemaker-progress-line' });
+      const line = list.createEl('div', { cls: 'notemaker-progress-line' });
       line.addClass(m.type === 'error' ? 'is-error' : 'is-info');
       const time = new Date(m.ts).toLocaleTimeString();
       line.createEl('span', { text: `[${time}] `, cls: 'timestamp' });
@@ -50,7 +50,7 @@ export class ProgressModal extends Modal {
     }
 
     if (this.completed) {
-      const footer = el.createEl('div', { cls: 'basemaker-progress-footer' });
+      const footer = el.createEl('div', { cls: 'notemaker-progress-footer' });
       const btn = footer.createEl('button', { text: 'OK' });
       btn.addClass('mod-cta');
       btn.onclick = () => this.close();

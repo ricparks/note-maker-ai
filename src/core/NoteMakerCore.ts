@@ -1,5 +1,5 @@
 /**
- * NoteTakerAI orchestrates the end-to-end workflow of turning the currently active
+ * NoteMakerAI orchestrates the end-to-end workflow of turning the currently active
  * image file into a structured subject note. It is the glue layer that sequences:
  *  1. Active file acquisition & basic validation (image type checks).
  *  2. Binary -> base64 conversion (delegated to utils).
@@ -653,10 +653,6 @@ export class NoteMakerCore {
 		const sections = { ...noteData.sections };
 		const myNotesKey = this.findSectionKey(sections, "My Notes");
 		const promptKey = this.findSectionKey(sections, "Prompt Additions");
-		const notesKey = this.findSectionKey(sections, "Notes of Interest");
-		if (notesKey) {
-			sections[notesKey] = cleanSection(sections[notesKey]);
-		}
 
 		let updated = baseContent;
 		if (myNotesKey) {
@@ -970,7 +966,7 @@ export class NoteMakerCore {
 
 
 		console.log(
-			`[NoteTakerAI] Fetching subject JSON (redo=${isRedo}). Prompt length: ${prompt.length}`
+			`[NoteMakerAI] Fetching subject JSON (redo=${isRedo}). Prompt length: ${prompt.length}`
 		);
 
 		const llmConfig = this.resolveLlmConfig(llmLabelOverride);
@@ -992,7 +988,7 @@ export class NoteMakerCore {
 			return null;
 		}
 
-		console.log(`[NoteTakerAI] Using LLM: ${vendor} / ${model} (${llmLabel})`);
+		console.log(`[NoteMakerAI] Using LLM: ${vendor} / ${model} (${llmLabel})`);
 
 		let result: AiResult;
 		if (vendor === "openai") {

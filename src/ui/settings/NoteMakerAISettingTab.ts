@@ -39,7 +39,7 @@ export class NoteMakerAISettingTab extends PluginSettingTab {
 	display(): void {
 		const { containerEl } = this;
 		containerEl.empty();
-		containerEl.createEl("h3", { text: "NoteTakerAI Settings" });
+		containerEl.createEl("h3", { text: "NoteMakerAI Settings" });
 
 		// VERSION (read-only)
 		new Setting(containerEl)

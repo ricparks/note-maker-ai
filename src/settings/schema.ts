@@ -71,7 +71,7 @@ export const DEFAULT_SETTINGS: NoteMakerAISettings = {
   folders: {
     notes: SUBJECT_DIR,
     photos: SUBJECT_PHOTOS_DIR,
-    addedPromptLocation: "BookPrompt.md",
+    addedPromptLocation: "",
   },
   image: {
     keepOriginalAfterResize: false,

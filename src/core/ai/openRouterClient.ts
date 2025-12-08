@@ -50,7 +50,7 @@ export async function callOpenRouterClient(params: OpenRouterParams): Promise<Ai
     model,
     response_format: { type: 'json_object' },
     system:
-      'You are BaseMaker. Respond with valid JSON only. Do not include markdown fences or explanations.',
+      'You are NoteMakerAI. Respond with valid JSON only. Do not include markdown fences or explanations.',
     messages: [
       {
         role: 'user',

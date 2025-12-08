@@ -1,6 +1,6 @@
-# BaseMaker for Obsidian
+# NoteMakerAI for Obsidian
 
-Turn a photo into a structured note in Obsidian using AI. Supports multiple subjects (e.g., Books, Wine, Travel), consistent photo handling, and a streamlined UX.
+Turn a photo into a structured note in Obsidian using AI. This reference implementation processes book covers, and is designed to be forked and adapted for other subjects (Wine, Albums, Plants, etc.).
 
 ## Development
 
@@ -15,24 +15,32 @@ Install and build:
 
 Manual install for testing:
 Copy `main.js`, `manifest.json`, and optional `styles.css` to your vault at:
-`<Vault>/.obsidian/plugins/basemaker/`
+`<Vault>/.obsidian/plugins/note-maker-ai/`
 
 ## Usage
 
-- In Obsidian, enable the plugin: Settings → Community plugins → Enable “BaseMaker”.
-- Open a JPG/PNG image (book cover or wine bottle) in your vault.
+- In Obsidian, enable the plugin: Settings -> Community plugins -> Enable NoteMakerAI.
+- Open a JPG/PNG image (e.g., a book cover) in your vault.
 - Click the diamond-plus ribbon icon to process the active image.
 - A progress modal will show steps. When done, a new note appears under the subject’s folder (e.g., `Bases/Books`).
-	- Configure subject and AI provider in Settings → BaseMaker.
+	- Configure AI provider in Settings -> NoteMakerAI.
 	- Add your API key for the selected provider (OpenAI or Gemini).
 
-### Travel subject
+## Creating a New Subject
 
-Select the Travel subject to create location-oriented notes for your travel photos. If EXIF metadata is present, date/time and GPS will be captured.
+This project is designed to be forked and customized for different subjects (Wine, Albums, Plants, etc.).
 
-- Frontmatter fields: `place_name`, `city`, `country`, `type`, `date_taken` (local date), `time_of_day` (local HH:MM), `latitude`, `longitude`, `altitude`, `photo`.
-- Sections: My Notes (blank), Description (AI narrative), Notes of Interest.
-- Files are stored under `Bases/Travel`; photos in `Bases/Travel/photos` with canonical names like `place_city_yyyy-mm-dd.jpg`.
+**Two guides available:**
+- **[FORKING.md](./FORKING.md)** - Complete technical guide with code examples
+- **[FORKING-AI.md](./FORKING-AI.md)** - Copy-paste prompts for AI-assisted development (Cursor, Copilot, etc.)
+
+Quick overview:
+1. Fork this repository
+2. Update `manifest.json` with your plugin identity
+3. Replace `src/core/subject/implementation.ts` with your subject
+4. Update `src/core/subject/index.ts` to export your subject
+5. Build and test
+
 
 ## PreparedImage usage (for contributors)
 
