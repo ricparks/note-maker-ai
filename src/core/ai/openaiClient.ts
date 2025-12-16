@@ -1,7 +1,8 @@
 import { AiResult, OpenAIParams } from './types';
+import { fetchWithTimeout, isTimeoutError } from './fetchWithTimeout';
 
 export async function callOpenAIClient(params: OpenAIParams): Promise<AiResult> {
-  const { base64Image, apiKey, model, prompt } = params; // vendor field unused except for narrowing
+  const { base64Image, apiKey, model, prompt, timeoutMs } = params;
   const url = 'https://api.openai.com/v1/chat/completions';
 
   const requestBody = {
@@ -22,14 +23,14 @@ export async function callOpenAIClient(params: OpenAIParams): Promise<AiResult> 
   };
 
   try {
-    const response = await fetch(url, {
+    const response = await fetchWithTimeout(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${apiKey}`
       },
       body: JSON.stringify(requestBody)
-    });
+    }, timeoutMs);
 
     if (!response.ok) {
       let errorPayload: any = null;
@@ -60,6 +61,10 @@ export async function callOpenAIClient(params: OpenAIParams): Promise<AiResult> 
       return { ok: false, error: 'OpenAI inner JSON parse error', errorType: 'parse', raw: { outer, content }, cause: e, model };
     }
   } catch (e) {
+    if (isTimeoutError(e)) {
+      const timeoutSec = timeoutMs ? Math.round(timeoutMs / 1000) : 0;
+      return { ok: false, error: `OpenAI request timed out after ${timeoutSec}s`, errorType: 'network', cause: e, model };
+    }
     return { ok: false, error: 'Network error contacting OpenAI', errorType: 'network', cause: e, model };
   }
 }

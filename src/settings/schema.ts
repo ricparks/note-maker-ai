@@ -2,7 +2,7 @@ import { SUBJECT_DIR, SUBJECT_PHOTOS_DIR } from "../core/subject/implementation"
 
 export const CURRENT_SETTINGS_VERSION = 3;
 
-export type LlmVendor = 'openai' | 'gemini' | 'openrouter';
+export type LlmVendor = 'openai' | 'gemini' | 'openrouter' | 'anthropic';
 
 export interface LlmConfigEntry {
   /** Unique label (max 12 chars, alphanumeric/underscores) that users select elsewhere. */
@@ -10,6 +10,8 @@ export interface LlmConfigEntry {
   vendor: LlmVendor;
   model: string;
   apiKey: string;
+  /** Anthropic API version header (e.g., '2023-06-01'). Only used when vendor is 'anthropic'. */
+  anthropicVersion?: string;
 }
 
 export interface FolderSettings {
@@ -44,6 +46,8 @@ export interface NoteMakerAISettings {
   image?: ImageSettings;
   /** Validation guardrails. */
   validation: ValidationSettings;
+  /** LLM request timeout in seconds (default: 180 = 3 minutes). */
+  llmTimeoutSeconds?: number;
 }
 
 export const DEFAULT_LLM_LABEL = 'default';
@@ -69,5 +73,6 @@ export const DEFAULT_SETTINGS: NoteMakerAISettings = {
   validation: {
     warnOnMismatch: true,
     mismatchThreshold: 0.7,
-  }
+  },
+  llmTimeoutSeconds: 180,
 };

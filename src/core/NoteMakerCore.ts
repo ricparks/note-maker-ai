@@ -57,6 +57,7 @@ import {
 import { callOpenAIClient } from "./ai/openaiClient";
 import { callGeminiClient } from "./ai/geminiClient";
 import { callOpenRouterClient } from "./ai/openRouterClient";
+import { callAnthropicClient } from "./ai/anthropicClient";
 import type { AiResult } from "./ai/types";
 import { confirm } from "../ui/confirm/ConfirmModal";
 import type { LlmConfigEntry } from "../settings/schema";
@@ -826,8 +827,9 @@ export class NoteMakerCore {
 	private findSectionBounds(note: string, heading: string):
 		| { headingStart: number; contentStart: number; contentEnd: number }
 		| null {
+		// Match any heading level (# through ######) with the specified heading text
 		const pattern = new RegExp(
-			`^####\\s+${this.escapeRegExp(heading)}\\s*$`,
+			`^#{1,6}\\s+${this.escapeRegExp(heading)}\\s*$`,
 			"m"
 		);
 		const match = pattern.exec(note);
@@ -839,7 +841,8 @@ export class NoteMakerCore {
 		} else if (note.slice(contentStart, contentStart + 1) === "\n") {
 			contentStart += 1;
 		}
-		const nextHeadingPattern = /^####\s+/gm;
+		// Match any heading level for the "next section" boundary
+		const nextHeadingPattern = /^#{1,6}\s+/gm;
 		nextHeadingPattern.lastIndex = contentStart;
 		const next = nextHeadingPattern.exec(note);
 		const contentEnd = next ? next.index : note.length;
@@ -966,6 +969,10 @@ export class NoteMakerCore {
 
 		console.log(`[NoteMakerAI] Using LLM: ${vendor} / ${model} (${llmLabel})`);
 
+		// Calculate timeout in milliseconds (default: 180 seconds = 3 minutes)
+		const timeoutSeconds = this.plugin.settings.llmTimeoutSeconds ?? 180;
+		const timeoutMs = timeoutSeconds > 0 ? timeoutSeconds * 1000 : undefined;
+
 		let result: AiResult;
 		if (vendor === "openai") {
 			progressModal.info(
@@ -976,7 +983,8 @@ export class NoteMakerCore {
 				apiKey: effectiveApiKey,
 				model,
 				prompt,
-				base64Image
+				base64Image,
+				timeoutMs,
 			});
 		} else if (vendor === "gemini") {
 			progressModal.info(
@@ -987,7 +995,8 @@ export class NoteMakerCore {
 				apiKey: effectiveApiKey,
 				model,
 				prompt,
-				base64Image
+				base64Image,
+				timeoutMs,
 			});
 		} else if (vendor === "openrouter") {
 			progressModal.info(
@@ -1004,6 +1013,20 @@ export class NoteMakerCore {
 				base64Image,
 				referer,
 				clientTitle: this.plugin.manifest.name,
+				timeoutMs,
+			});
+		} else if (vendor === "anthropic") {
+			progressModal.info(
+				`Using Anthropic model (${llmLabel}): ${model}`
+			);
+			result = await callAnthropicClient({
+				vendor: "anthropic",
+				apiKey: effectiveApiKey,
+				model,
+				prompt,
+				base64Image,
+				anthropicVersion: llmConfig.anthropicVersion,
+				timeoutMs,
 			});
 		} else {
 			progressModal.error(UNKNOWN_VENDOR_ERROR);

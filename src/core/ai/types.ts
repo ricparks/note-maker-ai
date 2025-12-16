@@ -32,6 +32,8 @@ export interface BaseLLMParams {
   model: string;
   /** User/system prompt guiding the vision + JSON extraction */
   prompt: string;
+  /** Optional request timeout in milliseconds. If not set, request may hang indefinitely. */
+  timeoutMs?: number;
 }
 
 /**
@@ -59,4 +61,13 @@ export interface OpenRouterParams extends BaseLLMParams {
   /** Optional origin and title headers improve OpenRouter telemetry transparency. */
   referer?: string;
   clientTitle?: string;
+}
+
+/**
+ * Parameters specific to Anthropic Claude API requests.
+ */
+export interface AnthropicParams extends BaseLLMParams {
+  vendor: 'anthropic';
+  /** API version header (e.g., '2023-06-01'). Defaults to latest stable if not specified. */
+  anthropicVersion?: string;
 }

@@ -23,10 +23,17 @@ const OPENROUTER_MODEL_OPTIONS: Array<{ value: string; label: string }> = [
 	{ value: "meta-llama/llama-4-maverick", label: "Llama 4 Maverick" },
 ];
 
+const ANTHROPIC_MODEL_OPTIONS: Array<{ value: string; label: string }> = [
+	{ value: "claude-sonnet-4-20250514", label: "Claude Sonnet 4" },
+	{ value: "claude-haiku-4-20250514", label: "Claude Haiku 4" },
+	{ value: "claude-opus-4-20250514", label: "Claude Opus 4" },
+];
+
 const MODEL_OPTION_MAP: Record<LlmVendor, Array<{ value: string; label: string }>> = {
 	openai: OPENAI_MODEL_OPTIONS,
 	gemini: GEMINI_MODEL_OPTIONS,
 	openrouter: OPENROUTER_MODEL_OPTIONS,
+	anthropic: ANTHROPIC_MODEL_OPTIONS,
 };
 
 export class NoteMakerAISettingTab extends PluginSettingTab {
@@ -218,6 +225,7 @@ export class NoteMakerAISettingTab extends PluginSettingTab {
 					{ value: "openai", text: "OpenAI" },
 					{ value: "gemini", text: "Google Gemini" },
 					{ value: "openrouter", text: "OpenRouter" },
+					{ value: "anthropic", text: "Anthropic" },
 				];
 				vendorOptions.forEach((opt) => {
 					const optEl = vendorSelect.createEl("option", {
@@ -344,6 +352,27 @@ export class NoteMakerAISettingTab extends PluginSettingTab {
 					await this.plugin.saveSettings();
 				};
 
+				// Anthropic-specific: API version input (only shown for Anthropic vendor)
+				const anthropicVersionInput = row.createEl("input", { type: "text" });
+				anthropicVersionInput.placeholder = "API version";
+				anthropicVersionInput.title = "Anthropic API version (e.g., 2023-06-01)";
+				anthropicVersionInput.value = entry.anthropicVersion || "";
+				anthropicVersionInput.style.width = "12ch";
+				anthropicVersionInput.style.display = entry.vendor === "anthropic" ? "" : "none";
+				anthropicVersionInput.onchange = async () => {
+					entry.anthropicVersion = anthropicVersionInput.value.trim() || undefined;
+					await this.plugin.saveSettings();
+				};
+
+				// Update visibility when vendor changes
+				const originalVendorOnChange = vendorSelect.onchange;
+				vendorSelect.onchange = async (e) => {
+					if (originalVendorOnChange) {
+						await (originalVendorOnChange as any).call(vendorSelect, e);
+					}
+					anthropicVersionInput.style.display = entry.vendor === "anthropic" ? "" : "none";
+				};
+
 				const delBtn = row.createEl("button", { text: "×" });
 				delBtn.addClass("notemaker-btn-ghost-danger");
 				delBtn.addClass("notemaker-icon-btn");
@@ -418,6 +447,26 @@ export class NoteMakerAISettingTab extends PluginSettingTab {
 
 
 		void refreshLlmDependentSelects();
+
+		// LLM Timeout Setting
+		new Setting(containerEl)
+			.setName("LLM request timeout (seconds)")
+			.setDesc(
+				"Maximum time to wait for LLM response. Set to 0 to disable timeout. Default: 180 (3 minutes)."
+			)
+			.addText((t) =>
+				t
+					.setPlaceholder("180")
+					.setValue(
+						String(this.plugin.settings.llmTimeoutSeconds ?? 180)
+					)
+					.onChange(async (val) => {
+						let n = parseInt(val, 10);
+						if (isNaN(n) || n < 0) n = 180;
+						this.plugin.settings.llmTimeoutSeconds = n;
+						await this.plugin.saveSettings();
+					})
+			);
 
 		// IMAGE HANDLING
 		containerEl.createEl("h3", { text: "Images" });

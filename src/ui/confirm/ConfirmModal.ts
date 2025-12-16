@@ -23,6 +23,7 @@ export class ConfirmModal extends Modal {
     checkboxWrap.appendText(" Don't show this warning again");
     cb.onchange = () => { this.dontShowAgain = cb.checked; };
     const footer = el.createEl('div', { cls: 'notemaker-confirm-footer' });
+    footer.style.marginTop = '1em';
     const cancelBtn = footer.createEl('button', { text: 'Cancel' });
     const okBtn = footer.createEl('button', { text: 'Continue' });
     okBtn.addClass('mod-cta');

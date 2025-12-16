@@ -194,6 +194,7 @@ isbn: "${(f.isbn || '').toString().replace(/"/g, '\\"')}"
 genres: "${(f.genres || '').toString().replace(/"/g, '\\"')}"
 date_read: ""
 rating: ""
+is_digital: 
 photo: ${coverProp}
 note_created_by: "Books"
 ---
@@ -258,18 +259,18 @@ ${bottomEmbed}`;
     const properties = note.frontmatter || {};
     const sections: import('./types').SubjectNoteSections = {};
     
-    // Simple regex-based section parser (assuming h4 headers as per buildNote)
+    // Regex-based section parser - recognizes any markdown heading level (# through ######)
     const lines = note.content.split(/\r?\n/);
     let currentSection: string | null = null;
     let buffer: string[] = [];
     
     for (const line of lines) {
-      const match = line.match(/^####\s+(.*)$/);
+      const match = line.match(/^(#{1,6})\s+(.*)$/);
       if (match) {
         if (currentSection) {
           sections[currentSection] = buffer.join('\n').trim();
         }
-        currentSection = match[1].trim();
+        currentSection = match[2].trim();
         buffer = [];
       } else if (currentSection) {
         buffer.push(line);

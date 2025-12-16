@@ -1,12 +1,19 @@
-import { AiResult, OpenRouterParams } from './types';
+import { AiResult, AnthropicParams } from './types';
 import { fetchWithTimeout, isTimeoutError } from './fetchWithTimeout';
 
-const OPENROUTER_ENDPOINT = 'https://openrouter.ai/api/v1/chat/completions';
+const ANTHROPIC_ENDPOINT = 'https://api.anthropic.com/v1/messages';
+const DEFAULT_ANTHROPIC_VERSION = '2023-06-01';
+const MAX_TOKENS = 4096;
 
-function parseOpenRouterJson(text: string): { ok: true; data: any } | { ok: false; error: unknown; raw: { text: string; candidates: string[] } } {
+/**
+ * Parse JSON from Anthropic response text.
+ * Handles potential markdown fences that some models may include.
+ */
+function parseAnthropicJson(text: string): { ok: true; data: any } | { ok: false; error: unknown; raw: { text: string; candidates: string[] } } {
   const trimmed = text.trim();
   const candidates: string[] = [];
 
+  // Extract content from markdown code fences if present
   const fenceRegex = /```(?:json)?\s*([\s\S]*?)```/gi;
   let match: RegExpExecArray | null;
   while ((match = fenceRegex.exec(trimmed)) !== null) {
@@ -14,6 +21,7 @@ function parseOpenRouterJson(text: string): { ok: true; data: any } | { ok: fals
     if (candidate) candidates.push(candidate);
   }
 
+  // Also try the raw text
   if (candidates.length === 0) {
     candidates.push(trimmed);
   } else if (!candidates.includes(trimmed)) {
@@ -33,25 +41,20 @@ function parseOpenRouterJson(text: string): { ok: true; data: any } | { ok: fals
   return { ok: false, error: lastError, raw: { text, candidates } };
 }
 
-export async function callOpenRouterClient(params: OpenRouterParams): Promise<AiResult> {
-  const { base64Image, apiKey, model, prompt, referer, clientTitle, timeoutMs } = params;
+export async function callAnthropicClient(params: AnthropicParams): Promise<AiResult> {
+  const { base64Image, apiKey, model, prompt, anthropicVersion, timeoutMs } = params;
 
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
-    Authorization: `Bearer ${apiKey}`,
+    'x-api-key': apiKey,
+    'anthropic-version': anthropicVersion || DEFAULT_ANTHROPIC_VERSION,
   };
-  if (typeof referer === 'string' && referer.length > 0) {
-    headers['HTTP-Referer'] = referer;
-  }
-  if (typeof clientTitle === 'string' && clientTitle.length > 0) {
-    headers['X-Title'] = clientTitle;
-  }
 
-  const body = {
+  // Anthropic Messages API request body
+  // Using the prefill technique to encourage JSON output
+  const requestBody = {
     model,
-    response_format: { type: 'json_object' },
-    system:
-      'You are NoteMakerAI. Respond with valid JSON only. Do not include markdown fences or explanations.',
+    max_tokens: MAX_TOKENS,
     messages: [
       {
         role: 'user',
@@ -67,14 +70,18 @@ export async function callOpenRouterClient(params: OpenRouterParams): Promise<Ai
           },
         ],
       },
+      {
+        role: 'assistant',
+        content: [{ type: 'text', text: '{' }], // Prefill to encourage JSON output
+      },
     ],
   };
 
   try {
-    const response = await fetchWithTimeout(OPENROUTER_ENDPOINT, {
+    const response = await fetchWithTimeout(ANTHROPIC_ENDPOINT, {
       method: 'POST',
       headers,
-      body: JSON.stringify(body),
+      body: JSON.stringify(requestBody),
     }, timeoutMs);
 
     if (!response.ok) {
@@ -82,7 +89,7 @@ export async function callOpenRouterClient(params: OpenRouterParams): Promise<Ai
       try { errorPayload = await response.json(); } catch {}
       return {
         ok: false,
-        error: errorPayload?.error || `OpenRouter API HTTP ${response.status}`,
+        error: errorPayload?.error?.message || `Anthropic API HTTP ${response.status}`,
         errorType: 'api',
         raw: errorPayload,
         model,
@@ -93,37 +100,40 @@ export async function callOpenRouterClient(params: OpenRouterParams): Promise<Ai
     try { parsed = await response.json(); } catch (cause) {
       return {
         ok: false,
-        error: 'Failed to parse OpenRouter JSON body',
+        error: 'Failed to parse Anthropic JSON body',
         errorType: 'parse',
         cause,
         model,
       };
     }
 
-    const content = parsed?.choices?.[0]?.message?.content;
-    const text = typeof content === 'string'
-      ? content
-      : Array.isArray(content)
-        ? content.find((chunk: any) => typeof chunk?.text === 'string')?.text
-        : undefined;
+    // Anthropic response structure: content[0].text
+    const content = parsed?.content;
+    const textBlock = Array.isArray(content)
+      ? content.find((block: any) => block.type === 'text')
+      : null;
+    const text = textBlock?.text;
 
     if (typeof text !== 'string') {
       return {
         ok: false,
-        error: 'OpenRouter response missing text content',
+        error: 'Anthropic response missing text content',
         errorType: 'structure',
         raw: parsed,
         model,
       };
     }
 
-    const parsedResult = parseOpenRouterJson(text);
+    // Prepend the '{' we used as prefill since it's not in the response
+    const fullJson = '{' + text;
+    const parsedResult = parseAnthropicJson(fullJson);
+    
     if (!parsedResult.ok) {
       return {
         ok: false,
-        error: 'OpenRouter inner JSON parse error',
+        error: 'Anthropic inner JSON parse error',
         errorType: 'parse',
-        raw: { parsed, text, candidates: parsedResult.raw.candidates },
+        raw: { parsed, text: fullJson, candidates: parsedResult.raw.candidates },
         cause: parsedResult.error,
         model,
       };
@@ -135,7 +145,7 @@ export async function callOpenRouterClient(params: OpenRouterParams): Promise<Ai
       const timeoutSec = timeoutMs ? Math.round(timeoutMs / 1000) : 0;
       return {
         ok: false,
-        error: `OpenRouter request timed out after ${timeoutSec}s`,
+        error: `Anthropic request timed out after ${timeoutSec}s`,
         errorType: 'network',
         cause,
         model,
@@ -143,7 +153,7 @@ export async function callOpenRouterClient(params: OpenRouterParams): Promise<Ai
     }
     return {
       ok: false,
-      error: 'Network error contacting OpenRouter',
+      error: 'Network error contacting Anthropic',
       errorType: 'network',
       cause,
       model,
