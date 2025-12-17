@@ -2,8 +2,9 @@ import { AiResult, GeminiParams } from './types';
 import { fetchWithTimeout, isTimeoutError } from './fetchWithTimeout';
 
 export async function callGeminiClient(params: GeminiParams): Promise<AiResult> {
-  const { base64Image, apiKey, model, prompt, timeoutMs } = params;
+  const { base64Image, apiKey, model, prompt } = params;
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+  const TIMEOUT_MS = 180000; // 3 minutes
 
   const requestBody = {
     contents: [
@@ -27,7 +28,7 @@ export async function callGeminiClient(params: GeminiParams): Promise<AiResult> 
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(requestBody)
-    }, timeoutMs);
+    }, TIMEOUT_MS);
 
     if (!response.ok) {
       let errorPayload: any = null;
@@ -59,7 +60,7 @@ export async function callGeminiClient(params: GeminiParams): Promise<AiResult> 
     }
   } catch (e) {
     if (isTimeoutError(e)) {
-      const timeoutSec = timeoutMs ? Math.round(timeoutMs / 1000) : 0;
+      const timeoutSec = Math.round(TIMEOUT_MS / 1000);
       return { ok: false, error: `Gemini request timed out after ${timeoutSec}s`, errorType: 'network', cause: e, model };
     }
     return { ok: false, error: 'Network error contacting Gemini', errorType: 'network', cause: e, model };

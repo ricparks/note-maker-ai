@@ -151,14 +151,27 @@ export class PreparedImage {
     const created = await (this.app.vault as any).createBinary(finalPath, this.preparedBuf);
     this.persistedFile = created as TFile;
 
-    // delete original if configured
-    if (!this.keepOriginal) {
-      try { await this.app.vault.delete(this.sourceFile); }
-      catch { /* ignore */ }
-    } else {
-      this.logInfo('Keeping original image as configured.');
-    }
+    this.persistedFile = created as TFile;
     return this.persistedFile;
+  }
+
+  /**
+   * Delete the original source file if configured to do so (and if it wasn't just moved).
+   * Should be called only after the entire workflow succeeds.
+   */
+  async deleteOriginal(): Promise<void> {
+    if (!this.keepOriginal && this.needsResize) {
+      try {
+        await this.app.vault.delete(this.sourceFile);
+        this.logInfo('Deleted original image.');
+      } catch (e) {
+        this.logError('Failed to delete original image.');
+        console.error(e);
+      }
+    } else if (!this.keepOriginal && !this.needsResize) {
+       // If we didn't resize, we likely moved the file, so we don't delete it (it's the same file).
+       // Logic in writeFile handles the move.
+    }
   }
 
   /**

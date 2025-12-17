@@ -2,8 +2,9 @@ import { AiResult, OpenAIParams } from './types';
 import { fetchWithTimeout, isTimeoutError } from './fetchWithTimeout';
 
 export async function callOpenAIClient(params: OpenAIParams): Promise<AiResult> {
-  const { base64Image, apiKey, model, prompt, timeoutMs } = params;
+  const { base64Image, apiKey, model, prompt } = params;
   const url = 'https://api.openai.com/v1/chat/completions';
+  const TIMEOUT_MS = 180000; // 3 minutes
 
   const requestBody = {
     model,
@@ -30,7 +31,7 @@ export async function callOpenAIClient(params: OpenAIParams): Promise<AiResult> 
         Authorization: `Bearer ${apiKey}`
       },
       body: JSON.stringify(requestBody)
-    }, timeoutMs);
+    }, TIMEOUT_MS);
 
     if (!response.ok) {
       let errorPayload: any = null;
@@ -62,7 +63,7 @@ export async function callOpenAIClient(params: OpenAIParams): Promise<AiResult> 
     }
   } catch (e) {
     if (isTimeoutError(e)) {
-      const timeoutSec = timeoutMs ? Math.round(timeoutMs / 1000) : 0;
+      const timeoutSec = Math.round(TIMEOUT_MS / 1000);
       return { ok: false, error: `OpenAI request timed out after ${timeoutSec}s`, errorType: 'network', cause: e, model };
     }
     return { ok: false, error: 'Network error contacting OpenAI', errorType: 'network', cause: e, model };

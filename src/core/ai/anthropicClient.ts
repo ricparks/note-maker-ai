@@ -41,13 +41,15 @@ function parseAnthropicJson(text: string): { ok: true; data: any } | { ok: false
   return { ok: false, error: lastError, raw: { text, candidates } };
 }
 
+const TIMEOUT_MS = 180000; // 3 minutes
+
 export async function callAnthropicClient(params: AnthropicParams): Promise<AiResult> {
-  const { base64Image, apiKey, model, prompt, anthropicVersion, timeoutMs } = params;
+  const { base64Image, apiKey, model, prompt } = params;
 
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     'x-api-key': apiKey,
-    'anthropic-version': anthropicVersion || DEFAULT_ANTHROPIC_VERSION,
+    'anthropic-version': DEFAULT_ANTHROPIC_VERSION,
   };
 
   // Anthropic Messages API request body
@@ -82,7 +84,7 @@ export async function callAnthropicClient(params: AnthropicParams): Promise<AiRe
       method: 'POST',
       headers,
       body: JSON.stringify(requestBody),
-    }, timeoutMs);
+    }, TIMEOUT_MS);
 
     if (!response.ok) {
       let errorPayload: any = null;
@@ -142,7 +144,7 @@ export async function callAnthropicClient(params: AnthropicParams): Promise<AiRe
     return { ok: true, data: parsedResult.data, raw: parsed, model };
   } catch (cause) {
     if (isTimeoutError(cause)) {
-      const timeoutSec = timeoutMs ? Math.round(timeoutMs / 1000) : 0;
+      const timeoutSec = Math.round(TIMEOUT_MS / 1000);
       return {
         ok: false,
         error: `Anthropic request timed out after ${timeoutSec}s`,

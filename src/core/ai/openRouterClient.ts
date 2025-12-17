@@ -2,6 +2,7 @@ import { AiResult, OpenRouterParams } from './types';
 import { fetchWithTimeout, isTimeoutError } from './fetchWithTimeout';
 
 const OPENROUTER_ENDPOINT = 'https://openrouter.ai/api/v1/chat/completions';
+const TIMEOUT_MS = 180000; // 3 minutes
 
 function parseOpenRouterJson(text: string): { ok: true; data: any } | { ok: false; error: unknown; raw: { text: string; candidates: string[] } } {
   const trimmed = text.trim();
@@ -34,7 +35,7 @@ function parseOpenRouterJson(text: string): { ok: true; data: any } | { ok: fals
 }
 
 export async function callOpenRouterClient(params: OpenRouterParams): Promise<AiResult> {
-  const { base64Image, apiKey, model, prompt, referer, clientTitle, timeoutMs } = params;
+  const { base64Image, apiKey, model, prompt, referer, clientTitle } = params;
 
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
@@ -75,7 +76,7 @@ export async function callOpenRouterClient(params: OpenRouterParams): Promise<Ai
       method: 'POST',
       headers,
       body: JSON.stringify(body),
-    }, timeoutMs);
+    }, TIMEOUT_MS);
 
     if (!response.ok) {
       let errorPayload: any = null;
@@ -132,7 +133,7 @@ export async function callOpenRouterClient(params: OpenRouterParams): Promise<Ai
     return { ok: true, data: parsedResult.data, raw: parsed, model };
   } catch (cause) {
     if (isTimeoutError(cause)) {
-      const timeoutSec = timeoutMs ? Math.round(timeoutMs / 1000) : 0;
+      const timeoutSec = Math.round(TIMEOUT_MS / 1000);
       return {
         ok: false,
         error: `OpenRouter request timed out after ${timeoutSec}s`,

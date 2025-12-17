@@ -24,9 +24,7 @@ const OPENROUTER_MODEL_OPTIONS: Array<{ value: string; label: string }> = [
 ];
 
 const ANTHROPIC_MODEL_OPTIONS: Array<{ value: string; label: string }> = [
-	{ value: "claude-sonnet-4-20250514", label: "Claude Sonnet 4" },
-	{ value: "claude-haiku-4-20250514", label: "Claude Haiku 4" },
-	{ value: "claude-opus-4-20250514", label: "Claude Opus 4" },
+	{ value: "claude-opus-4-5-20251101", label: "Claude Opus 4.5" },
 ];
 
 const MODEL_OPTION_MAP: Record<LlmVendor, Array<{ value: string; label: string }>> = {
@@ -56,6 +54,15 @@ export class NoteMakerAISettingTab extends PluginSettingTab {
 		// FOLDERS
 		containerEl.createEl("h3", { text: "Folders" });
 		
+
+
+		// Hack: Invisible focus trap to prevent "Notes Folder" (first input) from auto-focusing and opening suggestion dropdown
+		const focusTrap = containerEl.createEl("input", { type: "text" }); 
+		focusTrap.style.opacity = "0"; 
+		focusTrap.style.width = "0"; 
+		focusTrap.style.height = "0"; 
+		focusTrap.style.position = "absolute";
+
 		new Setting(containerEl)
 			.setName("Notes Folder")
 			.setDesc("Where to save new notes.")
@@ -261,6 +268,7 @@ export class NoteMakerAISettingTab extends PluginSettingTab {
 				});
 				customModelInput.placeholder = "Custom model";
 				customModelInput.style.display = "none";
+				customModelInput.style.minWidth = "12ch";
 				customModelInput.style.flex = "1";
 				customModelInput.maxLength = 80;
 
@@ -352,25 +360,13 @@ export class NoteMakerAISettingTab extends PluginSettingTab {
 					await this.plugin.saveSettings();
 				};
 
-				// Anthropic-specific: API version input (only shown for Anthropic vendor)
-				const anthropicVersionInput = row.createEl("input", { type: "text" });
-				anthropicVersionInput.placeholder = "API version";
-				anthropicVersionInput.title = "Anthropic API version (e.g., 2023-06-01)";
-				anthropicVersionInput.value = entry.anthropicVersion || "";
-				anthropicVersionInput.style.width = "12ch";
-				anthropicVersionInput.style.display = entry.vendor === "anthropic" ? "" : "none";
-				anthropicVersionInput.onchange = async () => {
-					entry.anthropicVersion = anthropicVersionInput.value.trim() || undefined;
-					await this.plugin.saveSettings();
-				};
-
 				// Update visibility when vendor changes
 				const originalVendorOnChange = vendorSelect.onchange;
 				vendorSelect.onchange = async (e) => {
 					if (originalVendorOnChange) {
 						await (originalVendorOnChange as any).call(vendorSelect, e);
 					}
-					anthropicVersionInput.style.display = entry.vendor === "anthropic" ? "" : "none";
+					// No extra fields to toggle for now
 				};
 
 				const delBtn = row.createEl("button", { text: "×" });
@@ -447,26 +443,6 @@ export class NoteMakerAISettingTab extends PluginSettingTab {
 
 
 		void refreshLlmDependentSelects();
-
-		// LLM Timeout Setting
-		new Setting(containerEl)
-			.setName("LLM request timeout (seconds)")
-			.setDesc(
-				"Maximum time to wait for LLM response. Set to 0 to disable timeout. Default: 180 (3 minutes)."
-			)
-			.addText((t) =>
-				t
-					.setPlaceholder("180")
-					.setValue(
-						String(this.plugin.settings.llmTimeoutSeconds ?? 180)
-					)
-					.onChange(async (val) => {
-						let n = parseInt(val, 10);
-						if (isNaN(n) || n < 0) n = 180;
-						this.plugin.settings.llmTimeoutSeconds = n;
-						await this.plugin.saveSettings();
-					})
-			);
 
 		// IMAGE HANDLING
 		containerEl.createEl("h3", { text: "Images" });

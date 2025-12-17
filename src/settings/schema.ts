@@ -10,8 +10,6 @@ export interface LlmConfigEntry {
   vendor: LlmVendor;
   model: string;
   apiKey: string;
-  /** Anthropic API version header (e.g., '2023-06-01'). Only used when vendor is 'anthropic'. */
-  anthropicVersion?: string;
 }
 
 export interface FolderSettings {
@@ -46,8 +44,6 @@ export interface NoteMakerAISettings {
   image?: ImageSettings;
   /** Validation guardrails. */
   validation: ValidationSettings;
-  /** LLM request timeout in seconds (default: 180 = 3 minutes). */
-  llmTimeoutSeconds?: number;
 }
 
 export const DEFAULT_LLM_LABEL = 'default';
@@ -74,5 +70,4 @@ export const DEFAULT_SETTINGS: NoteMakerAISettings = {
     warnOnMismatch: true,
     mismatchThreshold: 0.7,
   },
-  llmTimeoutSeconds: 180,
 };

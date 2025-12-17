@@ -21,6 +21,14 @@ export default class NoteMakerAI extends Plugin {
         this.core = new NoteMakerCore(this);
         this.addSettingTab(new NoteMakerAISettingTab(this.app, this));
         this.renderRibbon();
+
+        this.addCommand({
+            id: 'create-note-from-image',
+            name: 'Create note from image',
+            callback: () => {
+                this.core.processSelection();
+            },
+        });
     }
 
     // This function runs when your plugin is disabled

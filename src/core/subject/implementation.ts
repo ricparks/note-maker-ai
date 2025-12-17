@@ -176,11 +176,12 @@ export const bookSubject: SubjectDefinition<BookSubjectInfo> = {
    * Render markdown content for a book, including frontmatter and sections.
    * Summary and themes appear as sections (not frontmatter properties).
    */
-  buildNote(info, { coverFileName, exifData }) {
+  buildNote(info, { coverFileName, exifData, llmModel }) {
     const f = info.fields;
     const rawAuthor = (f.author || info.producer || '').toString();
     const coverProp = coverFileName ? `"[[${coverFileName}]]"` : '""';
     const bottomEmbed = coverFileName ? `\n![[${coverFileName}]]\n` : '';
+    const llmModelProp = llmModel ? `\nllm-model: "${llmModel}"` : '';
     return `---
 title: "${(info.title || '').replace(/"/g, '\\"')}"
 author: "${rawAuthor.replace(/"/g, '\\"')}"
@@ -196,7 +197,7 @@ date_read: ""
 rating: ""
 is_digital: 
 photo: ${coverProp}
-note_created_by: "Books"
+note_created_by: "Books"${llmModelProp}
 ---
 #### ${BOOK_SECTION_MY_NOTES}
 

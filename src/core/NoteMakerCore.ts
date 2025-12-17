@@ -261,13 +261,13 @@ export class NoteMakerCore {
 		console.log("Prepared image ready for AI call.");
 
 		progressModal.info("Calling AI vendor...");
-		const raw = await this.fetchSubjectJson(
+		const resultCtx = await this.fetchSubjectJson(
 			base64ForModel,
 			progressModal,
 			exifData || undefined,
 			llmLabelOverride
 		);
-		if (!raw) {
+		if (!resultCtx) {
 			progressModal.error(FAILED_GET_SUBJECT);
 			progressModal.done(false);
 			return base64ForModel;
@@ -275,9 +275,9 @@ export class NoteMakerCore {
 
 		let parsed: SubjectInfoBase | null = null;
 		try {
-			parsed = this.subject.parse(raw);
+			parsed = this.subject.parse(resultCtx.data);
 		} catch (e) {
-			console.error("Failed to parse subject data", e, raw);
+			console.error("Failed to parse subject data", e, resultCtx.data);
 		}
 
 		if (parsed) {
@@ -350,12 +350,17 @@ export class NoteMakerCore {
 				}
 			}
 
-			await this.createSubjectNote(
+			const success = await this.createSubjectNote(
 				parsed,
 				finalPhotoFile,
 				progressModal,
-				exifData
+				exifData,
+				resultCtx.model
 			);
+			
+			if (success) {
+				await preparedImage.deleteOriginal();
+			}
 		} else {
 			progressModal.error(FAILED_GET_SUBJECT);
 		}
@@ -454,24 +459,24 @@ export class NoteMakerCore {
 
 		progressModal.info("Fetching redo subject data...");
 		const { llmLabelOverride } = this.resolveSubjectDirsAndLlm();
-		const raw = await this.fetchSubjectJson(
+		const resultCtx = await this.fetchSubjectJson(
 			photoBase64,
 			progressModal,
 			exifFromNote,
 			llmLabelOverride
 		);
-		if (!raw) {
+		if (!resultCtx) {
 			progressModal.error(
 				"Redo failed while fetching updated subject data."
 			);
 			progressModal.done(false);
 			return;
 		}
-		console.log("[NoteMakerAI] Redo raw subject:", raw);
-		this.redoContext.rawSubject = raw;
+		console.log("[NoteMakerAI] Redo raw subject:", resultCtx.data);
+		this.redoContext.rawSubject = resultCtx.data;
 		progressModal.info("Fetched redo subject data");
 
-		const parsed = this.parseRedoSubject(raw, progressModal);
+		const parsed = this.parseRedoSubject(resultCtx.data, progressModal);
 		if (!parsed) {
 			this.redoContext = null;
 			return;
@@ -920,7 +925,7 @@ export class NoteMakerCore {
 		},
 		exifData?: import("./image/PreparedImage").ExifData,
 		llmLabelOverride?: string
-	): Promise<any> {
+	): Promise<{ data: any; model: string } | null> {
 		const isRedo = !!this.redoContext && this.redoContext.file.extension === "md";
 		let prompt: string;
 		if (isRedo && this.redoContext) {
@@ -969,9 +974,7 @@ export class NoteMakerCore {
 
 		console.log(`[NoteMakerAI] Using LLM: ${vendor} / ${model} (${llmLabel})`);
 
-		// Calculate timeout in milliseconds (default: 180 seconds = 3 minutes)
-		const timeoutSeconds = this.plugin.settings.llmTimeoutSeconds ?? 180;
-		const timeoutMs = timeoutSeconds > 0 ? timeoutSeconds * 1000 : undefined;
+
 
 		let result: AiResult;
 		if (vendor === "openai") {
@@ -984,7 +987,6 @@ export class NoteMakerCore {
 				model,
 				prompt,
 				base64Image,
-				timeoutMs,
 			});
 		} else if (vendor === "gemini") {
 			progressModal.info(
@@ -996,7 +998,6 @@ export class NoteMakerCore {
 				model,
 				prompt,
 				base64Image,
-				timeoutMs,
 			});
 		} else if (vendor === "openrouter") {
 			progressModal.info(
@@ -1013,7 +1014,6 @@ export class NoteMakerCore {
 				base64Image,
 				referer,
 				clientTitle: this.plugin.manifest.name,
-				timeoutMs,
 			});
 		} else if (vendor === "anthropic") {
 			progressModal.info(
@@ -1025,8 +1025,6 @@ export class NoteMakerCore {
 				model,
 				prompt,
 				base64Image,
-				anthropicVersion: llmConfig.anthropicVersion,
-				timeoutMs,
 			});
 		} else {
 			progressModal.error(UNKNOWN_VENDOR_ERROR);
@@ -1048,7 +1046,7 @@ export class NoteMakerCore {
 					.replace(/```json/g, "")
 					.replace(/```/g, "")
 					.trim();
-				return JSON.parse(cleaned);
+				return { data: JSON.parse(cleaned), model: result.model || model };
 			} catch (e) {
 				console.error("JSON Parse Error", e, result.data);
 				progressModal.error("Failed to parse AI response as JSON.");
@@ -1056,7 +1054,7 @@ export class NoteMakerCore {
 			}
 		}
 
-		return result.data;
+		return { data: result.data, model: result.model || model };
 	}
 
 	/**
@@ -1075,8 +1073,9 @@ export class NoteMakerCore {
 			error: (m: string) => void;
 			done: (success: boolean) => void;
 		},
-		exifData: import("./image/PreparedImage").ExifData | null | undefined
-	) {
+		exifData: import("./image/PreparedImage").ExifData | null | undefined,
+		llmModel?: string
+	): Promise<boolean> {
 		const fileName = this.sanitizeNoteFilename(
 			this.subject.getNoteFilename(info)
 		);
@@ -1113,6 +1112,7 @@ export class NoteMakerCore {
 			photoLink,
 			coverFileName,
 			exifData: exifData || undefined,
+			llmModel,
 		});
 		const content = this.normalizeSectionSpacing(baseContent);
 
@@ -1128,9 +1128,11 @@ export class NoteMakerCore {
 			progressModal.info("Opening note...");
 			const leaf = this.plugin.app.workspace.getLeaf(true);
 			await leaf.openFile(newFile);
+			return true;
 		} catch (error) {
 			console.error("Error creating new note:", error);
 			progressModal.error(COULD_NOT_CREATE_NOTE);
+			return false;
 		}
 	}
 }
