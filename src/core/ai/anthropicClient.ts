@@ -1,5 +1,6 @@
+import { requestUrl, RequestUrlParam } from 'obsidian';
 import { AiResult, AnthropicParams } from './types';
-import { fetchWithTimeout, isTimeoutError } from './fetchWithTimeout';
+import { isTimeoutError } from './fetchWithTimeout';
 
 const ANTHROPIC_ENDPOINT = 'https://api.anthropic.com/v1/messages';
 const DEFAULT_ANTHROPIC_VERSION = '2023-06-01';
@@ -80,15 +81,30 @@ export async function callAnthropicClient(params: AnthropicParams): Promise<AiRe
   };
 
   try {
-    const response = await fetchWithTimeout(ANTHROPIC_ENDPOINT, {
-      method: 'POST',
+    const requestParams: RequestUrlParam = {
+      url: ANTHROPIC_ENDPOINT,
+      method: "POST",
       headers,
       body: JSON.stringify(requestBody),
-    }, TIMEOUT_MS);
+      throw: false,
+    };
 
-    if (!response.ok) {
-      let errorPayload: any = null;
-      try { errorPayload = await response.json(); } catch {}
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => {
+        const error: any = new Error("Request timed out");
+        error.name = "AbortError"; // Mimic DOMException for compatibility if check uses that
+        reject(error);
+      }, TIMEOUT_MS);
+    });
+
+    // Use requestUrl to bypass CORS (runs in Node context in Obsidian)
+    const response = (await Promise.race([
+      requestUrl(requestParams),
+      timeoutPromise,
+    ])) as any;
+
+    if (response.status >= 400) {
+      const errorPayload = response.json;
       return {
         ok: false,
         error: errorPayload?.error?.message || `Anthropic API HTTP ${response.status}`,
@@ -99,7 +115,9 @@ export async function callAnthropicClient(params: AnthropicParams): Promise<AiRe
     }
 
     let parsed: any;
-    try { parsed = await response.json(); } catch (cause) {
+    try {
+      parsed = response.json;
+    } catch (cause) {
       return {
         ok: false,
         error: 'Failed to parse Anthropic JSON body',
@@ -143,7 +161,7 @@ export async function callAnthropicClient(params: AnthropicParams): Promise<AiRe
 
     return { ok: true, data: parsedResult.data, raw: parsed, model };
   } catch (cause) {
-    if (isTimeoutError(cause)) {
+    if (isTimeoutError(cause) || (cause as any).name === 'AbortError') {
       const timeoutSec = Math.round(TIMEOUT_MS / 1000);
       return {
         ok: false,
