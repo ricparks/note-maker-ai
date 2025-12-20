@@ -78,6 +78,8 @@ type RedoContext = {
 const SECTION_HEADING_ALIASES: Record<string, string[]> = {
 	"prompt additions": ["pa"],
 	pa: ["prompt additions"],
+	"additional media": ["media"],
+	media: ["additional media"],
 };
 
 // Image dimension limits for processing
@@ -482,6 +484,13 @@ export class NoteMakerCore {
 			return;
 		}
 		progressModal.info("Parsed redo subject data");
+		
+		await this.processAdditionalMedia(
+			this.redoContext.noteData,
+			parsed,
+			progressModal
+		);
+
 		await this.updateRedoNote(parsed, progressModal);
 	}
 
@@ -656,6 +665,14 @@ export class NoteMakerCore {
 			}
 		}
 
+		const mediaKey = this.findSectionKey(sections, "Additional Media");
+		if (mediaKey) {
+			const mediaBody = sections[mediaKey] ?? "";
+			if (mediaBody.trim().length > 0) {
+				updated = `${updated.trimEnd()}\n\n#### Additional Media\n${mediaBody}`;
+			}
+		}
+
 		updated = this.normalizeSectionSpacing(updated);
 
 		try {
@@ -671,6 +688,118 @@ export class NoteMakerCore {
 	}
 
 
+
+	private async processAdditionalMedia(
+		noteData: SubjectNoteData,
+		parsed: SubjectInfoBase,
+		progressModal: ReturnType<typeof createProgressModal>
+	): Promise<void> {
+		const resultCtx = this.redoContext;
+		if (!resultCtx) return;
+
+		const mediaKey = this.findSectionKey(
+			noteData.sections,
+			"Additional Media"
+		);
+		if (!mediaKey) return;
+
+		const sectionText = noteData.sections[mediaKey];
+		if (!sectionText) return;
+
+		// Find all links: [[...]] or ![[...]]
+		const linkRegex = /(!?\[\[)([^\]|]+)((?:\|[^\]]*)?]])/g;
+		const matches = Array.from(sectionText.matchAll(linkRegex));
+
+		if (matches.length === 0) return;
+
+		progressModal.info(
+			`Processing ${matches.length} additional media item${
+				matches.length === 1 ? "" : "s"
+			}...`
+		);
+
+		let newSectionText = sectionText;
+		const replacements: {
+			start: number;
+			end: number;
+			newText: string;
+		}[] = [];
+
+		const { notesDir, photosDir } = this.resolveSubjectDirsAndLlm();
+		const baseNameCandidate = (this.subject as any).getPhotoBasename
+			? (this.subject as any).getPhotoBasename(parsed)
+			: "image";
+
+		for (const match of matches) {
+			const prefix = match[1];
+			const linkPath = match[2];
+			const suffix = match[3];
+
+			const sourceFile = this.plugin.app.metadataCache.getFirstLinkpathDest(
+				linkPath,
+				resultCtx.file.path
+			);
+
+			if (
+				!sourceFile ||
+				!IMAGE_EXTENSIONS.includes((sourceFile.extension || "").toLowerCase())
+			) {
+				continue;
+			}
+
+			const prepared = new PreparedImage(this.plugin.app, sourceFile, {
+				subjectDir: notesDir,
+				photosDir: photosDir,
+				maxW: NOTE_IMAGE_MAX_WIDTH,
+				maxH: NOTE_IMAGE_MAX_HEIGHT,
+				aiMax: AI_IMAGE_MAX_DIM,
+				keepOriginal: !!this.plugin.settings.image?.keepOriginalAfterResize,
+				logger: {
+					info: (m) => progressModal.info(`[Media] ${m}`),
+					error: (m) => progressModal.error(`[Media] ${m}`),
+				},
+			});
+
+			const ok = await prepared.ensurePrepared();
+			if (!ok) continue;
+
+			await prepared.writeFile();
+
+			// Rename using canonical base (handles collisions)
+			const finalFile = await prepared.renameTo(
+				baseNameCandidate.toString()
+			);
+
+			await prepared.deleteOriginal();
+
+			const generated = this.plugin.app.fileManager.generateMarkdownLink(
+				finalFile,
+				resultCtx.file.path
+			);
+			// strip [[ and ]] to get the inner path
+			const barePath = generated
+				.replace(/^!\[\[/, "")
+				.replace(/\]\]$/, "")
+				.replace(/^\[\[/, "");
+
+			const newLink = `${prefix}${barePath}${suffix}`;
+			replacements.push({
+				start: match.index!,
+				end: match.index! + match[0].length,
+				newText: newLink,
+			});
+		}
+
+		// Apply replacements in reverse order to preserve indices
+		replacements.reverse().forEach((rep) => {
+			newSectionText =
+				newSectionText.slice(0, rep.start) +
+				rep.newText +
+				newSectionText.slice(rep.end);
+		});
+
+		noteData.sections[mediaKey] = newSectionText;
+	}
 
 	private sanitizeNoteFilename(name: string): string {
 		const raw = (name ?? "")
