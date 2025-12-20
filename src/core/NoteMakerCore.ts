@@ -238,6 +238,8 @@ export class NoteMakerCore {
 			maxH: NOTE_IMAGE_MAX_HEIGHT,
 			aiMax: AI_IMAGE_MAX_DIM,
 			keepOriginal: !!this.plugin.settings.image?.keepOriginalAfterResize,
+			orientation: this.plugin.settings.image?.orientation,
+			rotationDirection: this.plugin.settings.image?.rotationDirection,
 			logger: {
 				info: (m) => progressModal.info(m),
 				error: (m) => progressModal.error(m),
@@ -754,6 +756,8 @@ export class NoteMakerCore {
 				maxH: NOTE_IMAGE_MAX_HEIGHT,
 				aiMax: AI_IMAGE_MAX_DIM,
 				keepOriginal: !!this.plugin.settings.image?.keepOriginalAfterResize,
+				orientation: this.plugin.settings.image?.orientation,
+				rotationDirection: this.plugin.settings.image?.rotationDirection,
 				logger: {
 					info: (m) => progressModal.info(`[Media] ${m}`),
 					error: (m) => progressModal.error(`[Media] ${m}`),

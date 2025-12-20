@@ -12,6 +12,7 @@ const OPENAI_MODEL_OPTIONS: Array<{ value: string; label: string }> = [
 
 const GEMINI_MODEL_OPTIONS: Array<{ value: string; label: string }> = [
 	{ value: "gemini-3-pro-preview", label: "Gemini 3 Pro" },
+	{ value: "gemini-3-flash-preview", label: "Gemini 3 Flash" },
 	{ value: "gemini-2.5-flash", label: "Gemini 2.5 Flash" },
 ];
 
@@ -460,6 +461,8 @@ export class NoteMakerAISettingTab extends PluginSettingTab {
 						if (!this.plugin.settings.image) {
 							this.plugin.settings.image = {
 								keepOriginalAfterResize: val,
+								orientation: 'maintain',
+								rotationDirection: 'clockwise',
 							};
 						} else {
 							this.plugin.settings.image.keepOriginalAfterResize = val;
@@ -467,6 +470,49 @@ export class NoteMakerAISettingTab extends PluginSettingTab {
 						await this.plugin.saveSettings();
 					})
 			);
+
+		new Setting(containerEl)
+			.setName("Reduced Image Orientation")
+			.setDesc("Ensure the reduced image matches this orientation.")
+			.addDropdown((dd) => {
+				dd.addOption("maintain", "Maintain original");
+				dd.addOption("landscape", "Landscape");
+				dd.addOption("portrait", "Portrait");
+				dd.setValue(this.plugin.settings.image?.orientation || "maintain");
+				dd.onChange(async (val) => {
+					if (!this.plugin.settings.image) {
+						this.plugin.settings.image = {
+							keepOriginalAfterResize: false,
+							orientation: val as any,
+							rotationDirection: 'clockwise',
+						};
+					} else {
+						this.plugin.settings.image.orientation = val as any;
+					}
+					await this.plugin.saveSettings();
+				});
+			});
+
+		new Setting(containerEl)
+			.setName("Rotation Direction")
+			.setDesc("When rotating, which direction to turn.")
+			.addDropdown((dd) => {
+				dd.addOption("clockwise", "Clockwise");
+				dd.addOption("counter-clockwise", "Counter-Clockwise");
+				dd.setValue(this.plugin.settings.image?.rotationDirection || "clockwise");
+				dd.onChange(async (val) => {
+					if (!this.plugin.settings.image) {
+						this.plugin.settings.image = {
+							keepOriginalAfterResize: false,
+							orientation: 'maintain',
+							rotationDirection: val as any,
+						};
+					} else {
+						this.plugin.settings.image.rotationDirection = val as any;
+					}
+					await this.plugin.saveSettings();
+				});
+			});
 
 
 

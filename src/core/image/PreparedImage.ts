@@ -1,4 +1,5 @@
 import { App, TFile } from 'obsidian';
+import type { ReducedImageOrientation, RotationDirection } from '../../settings/schema';
 
 export type LogLevel = 'info' | 'error';
 export interface Logger {
@@ -14,6 +15,8 @@ export interface PreparedImageOptions {
   maxH?: number; // default 1000
   aiMax?: number; // default 512
   keepOriginal?: boolean; // default false
+  orientation?: ReducedImageOrientation;
+  rotationDirection?: RotationDirection;
   logger?: Logger;
 }
 
@@ -34,6 +37,8 @@ export class PreparedImage {
   private maxH: number;
   private aiMax: number;
   private keepOriginal: boolean;
+  private orientation: ReducedImageOrientation;
+  private rotationDirection: RotationDirection;
 
   // In-memory state after ensurePrepared()
   private originalBuf?: ArrayBuffer;
@@ -63,6 +68,8 @@ export class PreparedImage {
     this.maxH = opts.maxH ?? 1000;
     this.aiMax = opts.aiMax ?? 512;
     this.keepOriginal = !!opts.keepOriginal;
+    this.orientation = opts.orientation || 'maintain';
+    this.rotationDirection = opts.rotationDirection || 'clockwise';
   }
 
   // Public API
@@ -87,18 +94,39 @@ export class PreparedImage {
     }
     this.logInfo(`Image dimensions: ${w}×${h}`);
 
-    const { targetW, targetH, needsResize } = this.computeScaledDims(w, h, this.maxW, this.maxH);
-    this.needsResize = needsResize;
-    if (!needsResize) {
+    // Check for explicit rotation requirement
+    let effectiveW = w;
+    let effectiveH = h;
+    let rotate = false; 
+
+    if (this.orientation === 'landscape' && h > w) {
+        effectiveW = h;
+        effectiveH = w;
+        rotate = true;
+    } else if (this.orientation === 'portrait' && w > h) {
+        effectiveW = h;
+        effectiveH = w;
+        rotate = true;
+    }
+
+    const { targetW, targetH, needsResize } = this.computeScaledDims(effectiveW, effectiveH, this.maxW, this.maxH);
+    this.needsResize = needsResize || rotate;
+    if (!needsResize && !rotate) {
       // No resize needed; noteBase64 from original buf
       this.preparedWidth = w; this.preparedHeight = h;
       this.noteBase64 = this.toBase64(this.originalBuf);
       return true;
     }
 
-    this.logInfo(`Resizing image to fit within ${this.maxW}×${this.maxH}...`);
+    this.logInfo(`Resizing/Rotating image to fit within ${this.maxW}×${this.maxH}...`);
     try {
-      this.preparedBuf = await this.resizeToJpeg(this.originalBuf, targetW, targetH, 0.9);
+      this.preparedBuf = await this.resizeToJpeg(
+        this.originalBuf, 
+        targetW, 
+        targetH, 
+        0.9, 
+        rotate ? (this.rotationDirection === 'counter-clockwise' ? 'ccw' : 'cw') : 'none'
+      );
       this.preparedWidth = targetW; this.preparedHeight = targetH;
       this.noteBase64 = this.toBase64(this.preparedBuf);
       return true;
@@ -303,11 +331,24 @@ export class PreparedImage {
     return { targetW: Math.round(w * scale), targetH: Math.round(h * scale), needsResize: true };
   }
 
-  private async resizeToJpeg(sourceBuffer: ArrayBuffer, targetW: number, targetH: number, quality = 0.9): Promise<ArrayBuffer> {
+  private async resizeToJpeg(sourceBuffer: ArrayBuffer, targetW: number, targetH: number, quality = 0.9, rotate: 'none' | 'cw' | 'ccw' | boolean = 'none'): Promise<ArrayBuffer> {
     const { canvas, ctx } = this.makeCanvas(targetW, targetH);
     await this.withObjectUrl(sourceBuffer, (url) => new Promise<void>((resolve, reject) => {
       const img = new Image();
-      img.onload = () => { ctx.drawImage(img, 0, 0, targetW, targetH); resolve(); };
+      img.onload = () => { 
+        if (rotate === 'cw' || rotate === true) {
+          ctx.translate(targetW, 0);
+          ctx.rotate(Math.PI / 2);
+          ctx.drawImage(img, 0, 0, targetH, targetW);
+        } else if (rotate === 'ccw') {
+          ctx.translate(0, targetH);
+          ctx.rotate(-Math.PI / 2);
+          ctx.drawImage(img, 0, 0, targetH, targetW);
+        } else {
+          ctx.drawImage(img, 0, 0, targetW, targetH); 
+        }
+        resolve(); 
+      };
       img.onerror = reject; img.src = url;
     }));
     const blob: Blob | null = await new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', quality));

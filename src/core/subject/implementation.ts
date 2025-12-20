@@ -195,6 +195,7 @@ isbn: "${(f.isbn || '').toString().replace(/"/g, '\\"')}"
 genres: "${(f.genres || '').toString().replace(/"/g, '\\"')}"
 date_read: ""
 rating: ""
+is_reviewed: 
 is_digital: 
 photo: ${coverProp}
 note_created_by: "Books"${llmModelProp}

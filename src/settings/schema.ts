@@ -19,9 +19,16 @@ export interface FolderSettings {
   addedPromptLocation?: string; // optional path to a text file appended to the prompt
 }
 
+export type ReducedImageOrientation = 'maintain' | 'landscape' | 'portrait';
+export type RotationDirection = 'clockwise' | 'counter-clockwise';
+
 export interface ImageSettings {
   /** When a large image is resized, keep the original file instead of deleting it. */
   keepOriginalAfterResize: boolean;
+  /** Orientation behavior for the reduced image. */
+  orientation: ReducedImageOrientation;
+  /** Direction to rotate when orientation change is needed. */
+  rotationDirection: RotationDirection;
 }
 
 export interface ValidationSettings {
@@ -65,6 +72,8 @@ export const DEFAULT_SETTINGS: NoteMakerAISettings = {
   },
   image: {
     keepOriginalAfterResize: false,
+    orientation: 'maintain',
+    rotationDirection: 'clockwise',
   },
   validation: {
     warnOnMismatch: true,
