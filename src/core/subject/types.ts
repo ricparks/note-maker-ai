@@ -37,7 +37,7 @@ export interface SubjectPromptContext {
   exifData?: import('../image/PreparedImage').ExifData;
   noteData?: SubjectNoteData;
   app?: import('obsidian').App;
-  additionalPromptPath?: string;
+
   notesDir?: string;
   logInfo?: (message: string) => void;
 }

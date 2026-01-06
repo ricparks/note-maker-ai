@@ -97,17 +97,17 @@ export class NoteMakerAISettingTab extends PluginSettingTab {
 			});
 		
 		new Setting(containerEl)
-			.setName("Prompt Additions File")
-			.setDesc("A text file (in your notes folder or absolute path) to append to the system prompt.")
+			.setName("Subject Definition File")
+			.setDesc("A markdown file defining the subject processing instructions (frontmatter & sections).")
 			.addText((text) => {
-				text.setPlaceholder("e.g. BookPrompt.md")
-					.setValue(this.plugin.settings.folders.addedPromptLocation || "")
+				text.setPlaceholder("e.g. SubjectDef.md")
+					.setValue(this.plugin.settings.folders.subjectDefinitionLocation || "")
 					.onChange(async (value) => {
-						this.plugin.settings.folders.addedPromptLocation = value.trim();
+						this.plugin.settings.folders.subjectDefinitionLocation = value.trim();
 						await this.plugin.saveSettings();
 					});
 				new FolderSuggest(this.app, text.inputEl, async (picked) => {
-					this.plugin.settings.folders.addedPromptLocation = picked;
+					this.plugin.settings.folders.subjectDefinitionLocation = picked;
 					await this.plugin.saveSettings();
 				});
 			});

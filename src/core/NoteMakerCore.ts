@@ -408,7 +408,7 @@ export class NoteMakerCore {
 		}
 		const { notesDir } = this.resolveSubjectDirsAndLlm();
 		promptContext.app = this.plugin.app;
-		promptContext.additionalPromptPath = this.plugin.settings.folders.addedPromptLocation;
+
 		promptContext.notesDir = notesDir;
 		promptContext.logInfo = (m) => progressModal.info(m);
 
@@ -1070,7 +1070,7 @@ export class NoteMakerCore {
 			}
 			const { notesDir } = this.resolveSubjectDirsAndLlm();
 			context.app = this.plugin.app;
-			context.additionalPromptPath = this.plugin.settings.folders.addedPromptLocation;
+
 			context.notesDir = notesDir;
 			context.logInfo = (m) => progressModal.info(m);
 

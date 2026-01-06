@@ -16,7 +16,7 @@ export interface FolderSettings {
   notes: string;   // vault-relative
   photos: string;  // vault-relative
   llmLabel?: string;     // optional association to a specific LLM config label
-  addedPromptLocation?: string; // optional path to a text file appended to the prompt
+  subjectDefinitionLocation?: string; // optional path to a markdown file defining subject instructions
 }
 
 export type ReducedImageOrientation = 'maintain' | 'landscape' | 'portrait';
@@ -68,7 +68,7 @@ export const DEFAULT_SETTINGS: NoteMakerAISettings = {
   folders: {
     notes: SUBJECT_DIR,
     photos: SUBJECT_PHOTOS_DIR,
-    addedPromptLocation: "",
+    subjectDefinitionLocation: "",
   },
   image: {
     keepOriginalAfterResize: false,

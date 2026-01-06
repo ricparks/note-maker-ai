@@ -292,36 +292,7 @@ ${bottomEmbed}`;
   async getPrompt(context) {
     let prompt = BOOK_PROMPT;
 
-    // 1. Append external file content if configured
-    if (context.app && context.additionalPromptPath) {
-      let path = context.additionalPromptPath.trim();
-      if (path.length > 0) {
-        let file = context.app.vault.getAbstractFileByPath(path);
-        
-        // If not found and we have a notesDir, try resolving relative to notesDir
-        if (!file && context.notesDir && !path.includes('/')) {
-             const relativePath = `${context.notesDir}/${path}`;
-             file = context.app.vault.getAbstractFileByPath(relativePath);
-        }
 
-        if (file instanceof TFile) {
-          try {
-            const content = await context.app.vault.read(file);
-            if (content.trim().length > 0) {
-               prompt += `\n\n${content.trim()}`;
-               if (context.logInfo) {
-                 context.logInfo(`Added prompt from file: ${file.name}`);
-               }
-            }
-          } catch (err) {
-            console.warn("[NoteMakerAI] Failed to read prompt additions file:", err);
-          }
-        } else if (context.logInfo) {
-           const searchPath = context.notesDir ? `${path} or ${context.notesDir}/${path}` : path;
-           context.logInfo(`Note: Prompt file not found (${searchPath})`);
-        }
-      }
-    }
 
     // 2. Append per-note additions (Manual / Redo)
     if (context.noteData) {
