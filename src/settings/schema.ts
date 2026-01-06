@@ -1,4 +1,4 @@
-import { SUBJECT_DIR, SUBJECT_PHOTOS_DIR } from "../core/subject/implementation";
+import { SUBJECT_DIR, SUBJECT_PHOTOS_DIR } from "../utils/constants";
 
 export const CURRENT_SETTINGS_VERSION = 3;
 

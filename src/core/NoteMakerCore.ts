@@ -33,7 +33,7 @@ import { createProgressModal } from "../ui/progress/ProgressModal";
 import type NoteMakerAI from "../main";
 import { PreparedImage } from "./image/PreparedImage";
 // Subject system
-import { activeSubject } from "./subject";
+import { SubjectRegistry } from "./subject";
 import type {
 	SubjectInfoBase,
 	SubjectNoteData,
@@ -41,7 +41,7 @@ import type {
 	SubjectPromptContext,
 	SubjectNoteSections,
 } from "./subject";
-import { SUBJECT_DIR } from "./subject/implementation";
+import { SUBJECT_DIR } from "../utils/constants";
 
 import {
 	NO_ACTIVE_FILE_NOTICE,
@@ -90,13 +90,13 @@ const AI_IMAGE_MAX_DIM = 512;
 export class NoteMakerCore {
 	private redoContext: RedoContext | null = null;
 
-	constructor(private plugin: NoteMakerAI) {}
+	constructor(private plugin: NoteMakerAI, private registry: SubjectRegistry) {}
 
 	/**
 	 * Resolve the currently active subject definition.
 	 */
 	private get subject() {
-		return activeSubject;
+		return this.registry.activeSubject;
 	}
 
 	/**

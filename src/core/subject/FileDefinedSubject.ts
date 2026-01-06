@@ -1,0 +1,254 @@
+import { SubjectDefinition, SubjectInfoBase, SubjectNoteData, SubjectExistingNoteContext, SubjectPromptContext } from './types';
+import { SubjectDefinitionFile } from './file_schema';
+
+/**
+ * A generic SubjectDefinition that configures itself at runtime based on
+ * a parsed schema file (SubjectDefinitionFile).
+ */
+export class FileDefinedSubject implements SubjectDefinition<SubjectInfoBase> {
+  public id: string;
+  public prompt: string; // Base prompt, though we largely use getPrompt
+  public ribbonIcon: string;
+  public ribbonTitle: string;
+
+  constructor(private definition: SubjectDefinitionFile) {
+    this.id = this.sanitizeId(definition.subject_name);
+    this.ribbonIcon = definition.icon || 'star';
+    this.ribbonTitle = `Create ${definition.subject_name} note`;
+    
+    // We construct the static part of the prompt here or in getPrompt
+    this.prompt = this.buildBasePrompt();
+  }
+
+  private sanitizeId(name: string): string {
+    return name.toLowerCase().replace(/[^a-z0-9]+/g, '_');
+  }
+
+  /**
+   * Constructs the full system prompt by combining lead_prompt, properties,
+   * sections, and trailing_prompt from the definition.
+   */
+  private buildBasePrompt(): string {
+    const { lead_prompt, properties, sections, trailing_prompt } = this.definition;
+
+    const propsList = properties.map(p => `- ${p.key}: ${p.instruction}`).join('\n');
+    const sectionsList = sections.map(s => `- ${s.heading}: ${s.instruction}`).join('\n');
+    
+    // We also construct a robust JSON example dynamically to help the LLM structure correctly
+    const exampleObj: Record<string, any> = {};
+    properties.forEach(p => exampleObj[p.key] = "...");
+    sections.forEach(s => exampleObj[s.heading] = "...");
+    
+    // Combine standard meta fields that are always requested in trailing_prompt
+    // (Note: trailing_prompt in the file already contains specific JSON requirements/examples, 
+    // but we inject the specific fields list to be sure).
+
+    return `${lead_prompt}
+
+Extract these Properties:
+${propsList}
+
+Generate content for these Sections:
+${sectionsList}
+
+${trailing_prompt}`;
+  }
+
+  /**
+   * Dynamic prompt generation (allows for context additions like Redo).
+   */
+  async getPrompt(context: SubjectPromptContext): Promise<string> {
+    let finalPrompt = this.prompt;
+
+    // Handle Redo / Prompt Additions
+    if (context.noteData) {
+      const sections = context.noteData.sections;
+      const additions = sections['Prompt Additions'] || sections['PA'] || sections['pa'];
+      if (additions && additions.trim().length > 0) {
+        finalPrompt += `\n\nIMPORTANT: The user has provided additional instructions for this request:\n${additions.trim()}`;
+      }
+    }
+    return finalPrompt;
+  }
+
+  /**
+   * Simple templating engine: replaces {{key}} with value from info.fields.
+   */
+  private applyTemplate(template: string, info: SubjectInfoBase): string {
+    return template.replace(/\{\{([^}]+)\}\}/g, (match, key) => {
+      // Check in fields
+      if (key in info.fields) {
+        return String(info.fields[key] || '');
+      }
+      // Check in base info (title, producer)
+      if (key === 'title') return info.title;
+      if (key === 'producer') return info.producer || '';
+      
+      return ''; // Fallback to empty
+    });
+  }
+
+  private slugify(text: string): string {
+    return text
+      .normalize('NFKD') // split accented characters
+      .replace(/[^\p{L}\p{N}\s_-]/gu, '') // remove non-letters/numbers/separators
+      .trim()
+      .replace(/[\s_]+/g, '_') // collapse spaces/underscores
+      .toLowerCase();
+  }
+  
+  private sanitizeFilename(text: string): string {
+     // Conservative filename sanitizer for OS compatibility
+     return text.replace(/[\\/:"*?<>|]+/g, '').trim(); 
+  }
+
+  getNoteFilename(info: SubjectInfoBase): string {
+    const template = this.definition.naming?.note || "{{title}}";
+    const raw = this.applyTemplate(template, info);
+    // Sanitize for file system
+    return this.sanitizeFilename(raw) || 'Untitled Note';
+  }
+
+  getPhotoBasename(info: SubjectInfoBase): string {
+    const template = this.definition.naming?.photo || "image";
+    const raw = this.applyTemplate(template, info);
+    // Slugify for photo filenames (convention prefer snake_case/lowercase for assets)
+    return this.slugify(raw) || 'image';
+  }
+
+  parse(aiJson: any): SubjectInfoBase {
+    // Pass-through parsing. We trust the keys match what we asked for.
+    // We try to identify 'title' and 'producer' (author) for the Base system.
+    
+    // Heuristic: finding the "title" property
+    // We look for a property explicitly named 'title', or the first property in the list.
+    const titleKey = this.definition.properties.find(p => p.key.toLowerCase() === 'title')?.key || 'title';
+    const title = aiJson[titleKey] || 'Untitled';
+
+    // Heuristic: finding the "producer" (author) property
+    // Look for 'author', 'producer', or just use empty.
+    const producerKey = this.definition.properties.find(p => 
+      p.key.toLowerCase() === 'author' || p.key.toLowerCase() === 'producer'
+    )?.key;
+    const producer = producerKey ? aiJson[producerKey] : '';
+
+    return {
+      title: String(title),
+      producer: String(producer),
+      raw: aiJson,
+      fields: aiJson // The fields map 1:1 to the JSON
+    };
+  }
+
+  buildNote(info: SubjectInfoBase, context: { coverFileName?: string; llmModel?: string }): string {
+    const { properties, sections } = this.definition;
+    const fields = info.fields as Record<string, any>;
+
+    // 1. Build Frontmatter
+    const frontmatterLines: string[] = [];
+    frontmatterLines.push('---');
+    
+    // Add dynamic properties
+    for (const prop of properties) {
+      let val = fields[prop.key];
+      if (val === undefined || val === null) val = '';
+      
+      // Escape double quotes in strings
+      if (typeof val === 'string') {
+        val = `"${val.replace(/"/g, '\\"')}"`;
+      }
+      frontmatterLines.push(`${prop.key}: ${val}`);
+    }
+
+    // Add System Properties (Standard to NoteMakerAI)
+    frontmatterLines.push(`is_reviewed: `);
+    frontmatterLines.push(`is_digital: `);
+    
+    if (context.coverFileName) {
+      frontmatterLines.push(`photo: "[[${context.coverFileName}]]"`);
+    } else {
+      frontmatterLines.push(`photo: ""`);
+    }
+
+    // Origin tracker
+    frontmatterLines.push(`note_created_by: "${this.definition.subject_name}"`);
+    if (context.llmModel) {
+      frontmatterLines.push(`llm-model: "${context.llmModel}"`);
+    }
+
+    frontmatterLines.push('---');
+
+    // 2. Build Content
+    const contentLines: string[] = [];
+
+    // Framework Section: My Notes (Must exist for Redo)
+    contentLines.push(`#### My Notes`);
+    contentLines.push(''); // Empty by default
+
+    // Dynamic Sections from Definition
+    for (const sec of sections) {
+      const heading = sec.heading;
+      
+      // Look for data in fields (AI JSON) using exact match, then case-insensitive match
+      let content = fields[heading];
+      if (!content) {
+        const lowerHeading = heading.toLowerCase();
+        const matchingKey = Object.keys(fields).find(k => k.toLowerCase() === lowerHeading);
+        if (matchingKey) {
+          content = fields[matchingKey];
+        }
+      }
+      content = content || '';
+
+      contentLines.push(`#### ${heading}`);
+      contentLines.push(String(content).trim());
+    }
+
+    // Embed Image at bottom
+    if (context.coverFileName) {
+      contentLines.push('');
+      contentLines.push(`![[${context.coverFileName}]]`);
+    }
+
+    return [...frontmatterLines, ...contentLines].join('\n');
+  }
+
+  // --- Re-used Utilities ---
+
+  parseExistingNote(note: SubjectExistingNoteContext): SubjectNoteData | Promise<SubjectNoteData> {
+    const properties = note.frontmatter || {};
+    const sections: Record<string, string> = {};
+    
+    // Regex-based section parser (Standard markdown headings)
+    const lines = note.content.split(/\r?\n/);
+    let currentSection: string | null = null;
+    let buffer: string[] = [];
+    
+    for (const line of lines) {
+      const match = line.match(/^(#{1,6})\s+(.*)$/);
+      if (match) {
+        if (currentSection) {
+          sections[currentSection] = buffer.join('\n').trim();
+        }
+        currentSection = match[2].trim();
+        buffer = [];
+      } else if (currentSection) {
+        buffer.push(line);
+      }
+    }
+    if (currentSection) {
+      sections[currentSection] = buffer.join('\n').trim();
+    }
+    
+    return {
+      properties,
+      sections,
+      logSummary: `Parsed ${this.id} note: "${properties.title || 'Untitled'}"`
+    };
+  }
+
+  validateParsedData(info: SubjectInfoBase): string[] {
+    // Generic validation?
+    return [];
+  }
+}

@@ -3,7 +3,7 @@ import { NoteMakerAISettingTab } from './ui/settings/NoteMakerAISettingTab';
 import { SettingsManager } from './settings/SettingsManager';
 import type { NoteMakerAISettings } from './settings/schema';
 import { RIBBON_ICON, RIBBON_TITLE } from './utils/constants';
-import { activeSubject } from './core/subject';
+import { SubjectRegistry } from './core/subject';
 import { NoteMakerCore } from './core/NoteMakerCore';
 
 // Main plugin class kept minimal; business logic lives in NoteMakerCore (core/NoteMakerCore.ts)
@@ -11,6 +11,9 @@ export default class NoteMakerAI extends Plugin {
     settings!: NoteMakerAISettings; // provided by manager after load
     settingsManager!: SettingsManager;
     core!: NoteMakerCore;
+    // Registry to manage active subjects
+    subjectRegistry!: SubjectRegistry;
+    
     private ribbonEl?: HTMLElement;
 
     // This function runs when your plugin is loaded
@@ -18,7 +21,17 @@ export default class NoteMakerAI extends Plugin {
         this.settingsManager = new SettingsManager(this);
         await this.settingsManager.load();
         this.settings = this.settingsManager.data;
-        this.core = new NoteMakerCore(this);
+        
+        // Initialize Registry and Core
+        this.subjectRegistry = new SubjectRegistry();
+        this.core = new NoteMakerCore(this, this.subjectRegistry);
+
+        // Attempt to load custom subject definition if configured
+        const defPath = this.settings.folders.subjectDefinitionLocation;
+        if (defPath) {
+             await import('./core/subject/SubjectLoader').then(m => m.loadSubjectDefinition(this.app, defPath, this.subjectRegistry));
+        }
+
         this.addSettingTab(new NoteMakerAISettingTab(this.app, this));
         this.renderRibbon();
 
@@ -29,6 +42,28 @@ export default class NoteMakerAI extends Plugin {
                 this.core.processSelection();
             },
         });
+
+        // Watch for changes to the definition file
+        this.registerEvent(this.app.vault.on('modify', async (file) => {
+            const currentPath = this.settings.folders.subjectDefinitionLocation;
+            if (currentPath && file.path === currentPath) {
+                const loader = await import('./core/subject/SubjectLoader');
+                const success = await loader.loadSubjectDefinition(this.app, currentPath, this.subjectRegistry);
+                if (success) {
+                    this.renderRibbon();
+                }
+            }
+        }));
+        
+        // Also watch for creation (e.g. if user pastes it in)
+        this.registerEvent(this.app.vault.on('create', async (file) => {
+             const currentPath = this.settings.folders.subjectDefinitionLocation;
+             if (currentPath && file.path === currentPath) {
+                const loader = await import('./core/subject/SubjectLoader');
+                await loader.loadSubjectDefinition(this.app, currentPath, this.subjectRegistry);
+                this.renderRibbon();
+             }
+        }));
     }
 
     // This function runs when your plugin is disabled
@@ -40,8 +75,8 @@ export default class NoteMakerAI extends Plugin {
 
     // Render or re-render the ribbon icon based on the active subject
     private renderRibbon() {
-        // Single subject mode: explicit activeSubject
-        const subject = activeSubject;
+        // Single subject mode: explicit activeSubject from registry
+        const subject = this.subjectRegistry.activeSubject;
         const icon = subject.ribbonIcon || RIBBON_ICON;
         const title = subject.ribbonTitle || RIBBON_TITLE;
 

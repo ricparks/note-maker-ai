@@ -26,4 +26,9 @@ export const FAILED_READ_IMAGE_NOTICE = (fileName: string) => `Failed to read th
 export const NOTE_CREATED_NOTICE = (fileName: string) => `Successfully created note: ${fileName}.md`;
 
 // Supported image extensions (used for file type detection)
+// Supported image extensions (used for file type detection)
 export const IMAGE_EXTENSIONS = ["jpg", "jpeg", "png"];
+
+// Default directories
+export const SUBJECT_DIR = 'Notes/PhotoNotes';
+export const SUBJECT_PHOTOS_DIR = 'Notes/PhotoNotes/Attachments';

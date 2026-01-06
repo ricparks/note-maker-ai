@@ -2,7 +2,7 @@
 import { App, PluginSettingTab, Setting, Notice } from "obsidian";
 import type NoteMakerAI from "../../main";
 import type { LlmVendor } from "../../settings/schema";
-import { SUBJECT_DIR, SUBJECT_PHOTOS_DIR } from "../../core/subject/implementation";
+import { SUBJECT_DIR, SUBJECT_PHOTOS_DIR } from "../../utils/constants";
 import { FolderSuggest } from "../components/FolderSuggest";
 
 const OPENAI_MODEL_OPTIONS: Array<{ value: string; label: string }> = [
