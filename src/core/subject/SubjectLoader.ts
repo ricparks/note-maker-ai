@@ -15,7 +15,7 @@ export async function loadSubjectDefinition(app: App, filePath: string, registry
   const file = app.vault.getAbstractFileByPath(filePath);
   
   if (!file || !(file instanceof TFile)) {
-    console.log(`[NoteMakerAI] No subject definition file found at ${filePath}. Using default hardcoded subject.`);
+    console.warn(`[NoteMakerAI] No subject definition file found at ${filePath}.`);
     return false;
   }
 
@@ -24,6 +24,7 @@ export async function loadSubjectDefinition(app: App, filePath: string, registry
     const yamlContent = extractYamlFromMarkdown(content);
     
     if (!yamlContent) {
+      new Notice(`NoteMakerAI: Subject definition file "${filePath}" is empty or invalid.`);
       console.warn(`[NoteMakerAI] ${filePath} is empty or invalid.`);
       // We do not fallback automatically here; partial failure might be confusing.
       return false;

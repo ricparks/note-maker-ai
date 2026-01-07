@@ -18,7 +18,6 @@ export class SettingsManager {
       ...stored,
       folders: { ...DEFAULT_SETTINGS.folders, ...stored?.folders },
       image: { ...DEFAULT_SETTINGS.image, ...stored?.image },
-      validation: { ...DEFAULT_SETTINGS.validation, ...stored?.validation },
       llms: stored?.llms ?? DEFAULT_SETTINGS.llms,
     };
   }
