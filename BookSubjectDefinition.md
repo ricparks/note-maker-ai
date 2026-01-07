@@ -6,6 +6,9 @@ naming:
     note: "{{author}} - {{title}}"
     photo: "{{author}}_{{title}}_{{publicationDate}}"
 
+validate_subject: true
+validation_threshold: 0.8
+
 properties: 
     - key: "title" 
       instruction: "Canonical book title" 

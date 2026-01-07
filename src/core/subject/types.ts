@@ -50,6 +50,8 @@ export interface SubjectPromptContext {
 export interface SubjectDefinition<T extends SubjectInfoBase = SubjectInfoBase> {
   id: string;                 // stable identifier (e.g., 'wine')
   prompt: string;             // AI prompt to send
+  validateSubject?: boolean;  // Whether to check correlation between image and subject
+  validationThreshold?: number; // Optional verification threshold override
   /** Optional: Build a prompt dynamically based on context (e.g., EXIF or parsed note data). If provided, takes precedence over 'prompt'. */
   getPrompt?(context: SubjectPromptContext): string | Promise<string>;
   getNoteFilename(info: T): string;  // derive filename (without extension)

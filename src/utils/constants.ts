@@ -30,5 +30,5 @@ export const NOTE_CREATED_NOTICE = (fileName: string) => `Successfully created n
 export const IMAGE_EXTENSIONS = ["jpg", "jpeg", "png"];
 
 // Default directories
-export const SUBJECT_DIR = 'Notes/PhotoNotes';
-export const SUBJECT_PHOTOS_DIR = 'Notes/PhotoNotes/Attachments';
+export const SUBJECT_DIR = 'NoteMakerAI';
+export const SUBJECT_PHOTOS_DIR = 'NoteMakerAI/photos';

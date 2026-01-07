@@ -26,4 +26,6 @@ export interface SubjectDefinitionFile {
   sections: FileDefinedSection[];
   lead_prompt: string;
   trailing_prompt: string;
+  validate_subject?: boolean;
+  validation_threshold?: number;
 }

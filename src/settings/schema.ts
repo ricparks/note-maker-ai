@@ -31,16 +31,6 @@ export interface ImageSettings {
   rotationDirection: RotationDirection;
 }
 
-export interface ValidationSettings {
-  /** If true, warns when the AI predicts a category other than 'book' (e.g. wine, travel). */
-  warnOnMismatch: boolean;
-  /** Confidence threshold (0.0 - 1.0) above which to show the warning. */
-  mismatchThreshold: number;
-}
-
-// ------------------------------------------------------------------
-// Settings V3 (Latest)
-// ------------------------------------------------------------------
 export interface NoteMakerAISettings {
   llms: LlmConfigEntry[];
   defaultLlmLabel?: string;
@@ -49,8 +39,6 @@ export interface NoteMakerAISettings {
 
   /** Global "Keep original after resize" setting. */
   image?: ImageSettings;
-  /** Validation guardrails. */
-  validation: ValidationSettings;
 }
 
 export const DEFAULT_LLM_LABEL = 'default';
@@ -74,9 +62,5 @@ export const DEFAULT_SETTINGS: NoteMakerAISettings = {
     keepOriginalAfterResize: false,
     orientation: 'maintain',
     rotationDirection: 'clockwise',
-  },
-  validation: {
-    warnOnMismatch: true,
-    mismatchThreshold: 0.7,
   },
 };

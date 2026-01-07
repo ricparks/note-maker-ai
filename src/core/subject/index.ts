@@ -16,4 +16,8 @@ export class SubjectRegistry {
     public setActiveSubject(subject: SubjectDefinition<SubjectInfoBase>) {
         this._activeSubject = subject;
     }
+
+    public clearCustomSubject() {
+        this._activeSubject = defaultSubject;
+    }
 }

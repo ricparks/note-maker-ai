@@ -299,11 +299,16 @@ export class NoteMakerCore {
 			}
 
 
+
 			// Validation Guardrail
 			try {
-				const guard = (parsed as any).meta || {};
-				const warnEnabled = this.plugin.settings.validation.warnOnMismatch ?? true;
-				const threshold = this.plugin.settings.validation.mismatchThreshold ?? 0.7;
+				const guard = (parsed.raw) as any || {};
+				// Additional check: does the subject itself want validation?
+				const subjectWantsValidation = !!this.subject.validateSubject;
+				
+				// Prefer subject-specific threshold, fallback to default (0.7)
+				const threshold = this.subject.validationThreshold ?? 0.7;
+
 				const predicted = guard.predicted_category as string | undefined;
 				const confidence = typeof guard.confidence === "number" ? guard.confidence : undefined;
 				const subjectMatch = typeof guard.subject_match === "boolean" ? guard.subject_match : true;
@@ -311,19 +316,15 @@ export class NoteMakerCore {
 				
 				const isMismatch = subjectMatch === false;
 
-				if (isMismatch) {
+				if (isMismatch && subjectWantsValidation) {
 					const confStr = (confidence ?? 0).toFixed(2);
-					if ((confidence ?? 0) >= threshold && warnEnabled) {
+					if ((confidence ?? 0) >= threshold) {
 						const msg = `This looks like ${
 							predicted ?? "something else"
 						} (${confStr}).${
 							reason ? " " + reason : ""
 						} Continue anyway?`;
 						const res = await confirm(this.plugin.app, msg);
-						if (res.dontShowAgain) {
-							this.plugin.settings.validation.warnOnMismatch = false;
-							await this.plugin.saveSettings();
-						}
 						if (!res.ok) {
 							progressModal.done(false);
 							return null;

@@ -105,10 +105,14 @@ export class NoteMakerAISettingTab extends PluginSettingTab {
 					.onChange(async (value) => {
 						this.plugin.settings.folders.subjectDefinitionLocation = value.trim();
 						await this.plugin.saveSettings();
+						// Reload subject definition and refresh ribbon when path changes
+						await this.plugin.reloadSubjectDefinition();
 					});
 				new FolderSuggest(this.app, text.inputEl, async (picked) => {
 					this.plugin.settings.folders.subjectDefinitionLocation = picked;
 					await this.plugin.saveSettings();
+					// Reload subject definition and refresh ribbon when path changes
+					await this.plugin.reloadSubjectDefinition();
 				});
 			});
 
@@ -519,44 +523,6 @@ export class NoteMakerAISettingTab extends PluginSettingTab {
 		// Separator after Subject Folders section
 		containerEl.createEl("hr");
 
-		// VALIDATION
-		containerEl.createEl("h3", { text: "Validation" });
-		new Setting(containerEl)
-			.setName("Warn on subject mismatch")
-			.setDesc(
-				"Show a warning if the AI predicts the image is not the subject."
-			)
-			.addToggle((t) =>
-				t
-					.setValue(
-						this.plugin.settings.validation.warnOnMismatch ?? true
-					)
-					.onChange(async (val) => {
-						this.plugin.settings.validation.warnOnMismatch = val;
-						await this.plugin.saveSettings();
-					})
-			);
-		new Setting(containerEl)
-			.setName("Mismatch confidence threshold")
-			.setDesc(
-				"Warn only if the AI is this confident that it is NOT the subject."
-			)
-			.addText((t) =>
-				t
-					.setPlaceholder("0.7")
-					.setValue(
-						String(
-							this.plugin.settings.validation.mismatchThreshold ??
-								0.7
-						)
-					)
-					.onChange(async (val) => {
-						let n = parseFloat(val);
-						if (isNaN(n)) n = 0.7;
-						n = Math.max(0, Math.min(1, n));
-						this.plugin.settings.validation.mismatchThreshold = n;
-						await this.plugin.saveSettings();
-					})
-			);
 	}
+
 }

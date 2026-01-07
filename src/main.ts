@@ -73,6 +73,19 @@ export default class NoteMakerAI extends Plugin {
 
     async saveSettings() { await this.settingsManager.save(); }
 
+    // Reload the subject definition from the current path setting and refresh the ribbon
+    async reloadSubjectDefinition() {
+        const defPath = this.settings.folders.subjectDefinitionLocation;
+        if (defPath) {
+            const loader = await import('./core/subject/SubjectLoader');
+            await loader.loadSubjectDefinition(this.app, defPath, this.subjectRegistry);
+        } else {
+            // If path is cleared, reset to default subject
+            this.subjectRegistry.clearCustomSubject();
+        }
+        this.renderRibbon();
+    }
+
     // Render or re-render the ribbon icon based on the active subject
     private renderRibbon() {
         // Single subject mode: explicit activeSubject from registry

@@ -10,11 +10,15 @@ export class FileDefinedSubject implements SubjectDefinition<SubjectInfoBase> {
   public prompt: string; // Base prompt, though we largely use getPrompt
   public ribbonIcon: string;
   public ribbonTitle: string;
+  public validateSubject: boolean;
+  public validationThreshold?: number;
 
   constructor(private definition: SubjectDefinitionFile) {
     this.id = this.sanitizeId(definition.subject_name);
     this.ribbonIcon = definition.icon || 'star';
     this.ribbonTitle = `Create ${definition.subject_name} note`;
+    this.validateSubject = definition.validate_subject ?? false;
+    this.validationThreshold = definition.validation_threshold;
     
     // We construct the static part of the prompt here or in getPrompt
     this.prompt = this.buildBasePrompt();
@@ -43,13 +47,18 @@ export class FileDefinedSubject implements SubjectDefinition<SubjectInfoBase> {
     // (Note: trailing_prompt in the file already contains specific JSON requirements/examples, 
     // but we inject the specific fields list to be sure).
 
-    return `${lead_prompt}
+    const exampleJson = JSON.stringify(exampleObj, null, 2);
+    
+  return `${lead_prompt}
 
 Extract these Properties:
 ${propsList}
 
 Generate content for these Sections:
 ${sectionsList}
+
+Return your response as JSON matching this exact structure:
+${exampleJson}
 
 ${trailing_prompt}`;
   }
