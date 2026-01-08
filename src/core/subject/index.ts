@@ -1,23 +1,32 @@
-export { type SubjectDefinition, type SubjectInfoBase, type SubjectNoteData, type SubjectExistingNoteContext, type SubjectPromptContext, type SubjectNoteSections } from './types';
+export { type ActiveSubject, type SubjectDefinition, type SubjectInfoBase, type SubjectNoteData, type SubjectExistingNoteContext, type SubjectPromptContext, type SubjectNoteSections } from './types';
 import { defaultSubject } from './defaults';
-import type { SubjectDefinition, SubjectInfoBase } from './types';
+import type { ActiveSubject, SubjectDefinition, SubjectInfoBase } from './types';
+import { SUBJECT_DIR, SUBJECT_PHOTOS_DIR } from '../../utils/constants';
 
 /**
- * Registry to manage the active subject definition.
- * Encapsulates the state that was previously valid as a global singleton.
+ * Registry to manage active subject definitions.
+ * Now manages a list of configured subjects (ActiveSubject).
  */
 export class SubjectRegistry {
-    private _activeSubject: SubjectDefinition<SubjectInfoBase> = defaultSubject;
+    // Map subject name -> ActiveSubject
+    private _subjects: Map<string, ActiveSubject> = new Map();
 
-    public get activeSubject(): SubjectDefinition<SubjectInfoBase> {
-        return this._activeSubject;
+    /**
+     * returns all registered subjects
+     */
+    public get subjects(): ActiveSubject[] {
+        return Array.from(this._subjects.values());
     }
 
-    public setActiveSubject(subject: SubjectDefinition<SubjectInfoBase>) {
-        this._activeSubject = subject;
+    public registerSubject(config: ActiveSubject) {
+       this._subjects.set(config.name, config);
     }
 
-    public clearCustomSubject() {
-        this._activeSubject = defaultSubject;
+    public getSubject(name: string): ActiveSubject | undefined {
+        return this._subjects.get(name);
+    }
+    
+    public clear() {
+        this._subjects.clear();
     }
 }

@@ -19,6 +19,14 @@ export interface FolderSettings {
   subjectDefinitionLocation?: string; // optional path to a markdown file defining subject instructions
 }
 
+export interface SubjectConfigEntry {
+  name: string;
+  notesDir: string;
+  photosDir: string;
+  subjectDefinitionPath: string;
+  llmLabel?: string;
+}
+
 export type ReducedImageOrientation = 'maintain' | 'landscape' | 'portrait';
 export type RotationDirection = 'clockwise' | 'counter-clockwise';
 
@@ -35,9 +43,13 @@ export interface NoteMakerAISettings {
   llms: LlmConfigEntry[];
   defaultLlmLabel?: string;
 
-  folders: FolderSettings;
+  folders?: FolderSettings;
+
+  /** Configured subjects (new multi-subject support). */
+  subjects: SubjectConfigEntry[];
 
   /** Global "Keep original after resize" setting. */
+
   image?: ImageSettings;
 }
 
@@ -58,6 +70,7 @@ export const DEFAULT_SETTINGS: NoteMakerAISettings = {
     photos: SUBJECT_PHOTOS_DIR,
     subjectDefinitionLocation: "",
   },
+  subjects: [],
   image: {
     keepOriginalAfterResize: false,
     orientation: 'maintain',

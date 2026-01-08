@@ -14,7 +14,8 @@ export default class NoteMakerAI extends Plugin {
     // Registry to manage active subjects
     subjectRegistry!: SubjectRegistry;
     
-    private ribbonEl?: HTMLElement;
+    // List of active ribbon elements
+    private ribbonEls: HTMLElement[] = [];
 
     // This function runs when your plugin is loaded
     async onload() {
@@ -26,43 +27,37 @@ export default class NoteMakerAI extends Plugin {
         this.subjectRegistry = new SubjectRegistry();
         this.core = new NoteMakerCore(this, this.subjectRegistry);
 
-        // Attempt to load custom subject definition if configured
-        const defPath = this.settings.folders.subjectDefinitionLocation;
-        if (defPath) {
-             await import('./core/subject/SubjectLoader').then(m => m.loadSubjectDefinition(this.app, defPath, this.subjectRegistry));
-        }
+        // Load all configured subjects
+        await this.loadAllSubjects();
 
         this.addSettingTab(new NoteMakerAISettingTab(this.app, this));
-        this.renderRibbon();
+        this.renderRibbons();
 
+        // Register global command (uses default subject if available)
         this.addCommand({
-            id: 'create-note-from-image',
-            name: 'Create note from image',
+            id: 'create-note-from-image-default',
+            name: 'Create note from image (Default Subject)',
             callback: () => {
                 this.core.processSelection();
             },
         });
 
-        // Watch for changes to the definition file
+        // Watch for changes to any definition file
         this.registerEvent(this.app.vault.on('modify', async (file) => {
-            const currentPath = this.settings.folders.subjectDefinitionLocation;
-            if (currentPath && file.path === currentPath) {
-                const loader = await import('./core/subject/SubjectLoader');
-                const success = await loader.loadSubjectDefinition(this.app, currentPath, this.subjectRegistry);
-                if (success) {
-                    this.renderRibbon();
-                }
+            const matched = this.settings.subjects.find(s => s.subjectDefinitionPath === file.path);
+            if (matched) {
+               await this.reloadSubject(matched);
+               this.renderRibbons();
             }
         }));
         
         // Also watch for creation (e.g. if user pastes it in)
         this.registerEvent(this.app.vault.on('create', async (file) => {
-             const currentPath = this.settings.folders.subjectDefinitionLocation;
-             if (currentPath && file.path === currentPath) {
-                const loader = await import('./core/subject/SubjectLoader');
-                await loader.loadSubjectDefinition(this.app, currentPath, this.subjectRegistry);
-                this.renderRibbon();
-             }
+            const matched = this.settings.subjects.find(s => s.subjectDefinitionPath === file.path);
+            if (matched) {
+               await this.reloadSubject(matched);
+               this.renderRibbons();
+            }
         }));
     }
 
@@ -73,45 +68,60 @@ export default class NoteMakerAI extends Plugin {
 
     async saveSettings() { await this.settingsManager.save(); }
 
-    // Reload the subject definition from the current path setting and refresh the ribbon
-    async reloadSubjectDefinition() {
-        const defPath = this.settings.folders.subjectDefinitionLocation;
-        if (defPath) {
-            const loader = await import('./core/subject/SubjectLoader');
-            await loader.loadSubjectDefinition(this.app, defPath, this.subjectRegistry);
-        } else {
-            // If path is cleared, reset to default subject
-            this.subjectRegistry.clearCustomSubject();
-        }
-        this.renderRibbon();
-    }
-
-    // Render or re-render the ribbon icon based on the active subject
-    private renderRibbon() {
-        // Single subject mode: explicit activeSubject from registry
-        const subject = this.subjectRegistry.activeSubject;
-        const icon = subject.ribbonIcon || RIBBON_ICON;
-        const title = subject.ribbonTitle || RIBBON_TITLE;
-
-        // If we already have a ribbon element, just update its icon and tooltip.
-        if (this.ribbonEl) {
-            try {
-                setIcon(this.ribbonEl, icon);
-                this.ribbonEl.setAttribute('aria-label', title);
-                // Keep tooltip behavior consistent with Obsidian’s addRibbonIcon
-                this.ribbonEl.setAttribute('data-tooltip-delay', '50');
-            } catch (e) {
-                // Fallback: if updating fails for any reason, recreate the element
-                try { (this.ribbonEl as any)?.remove?.(); } catch {}
-                this.ribbonEl = this.addRibbonIcon(icon, title, () => this.core.processSelection());
-            }
+    private async loadAllSubjects() {
+        this.subjectRegistry.clear();
+        const subjects = this.settings.subjects || [];
+        
+        if (subjects.length === 0) {
+            console.log("[NoteMakerAI] No subjects configured.");
             return;
         }
 
-        // First render: create the ribbon icon and register the click handler
-        this.ribbonEl = this.addRibbonIcon(icon, title, () => {
-            this.core.processSelection();
-        });
+        for (const config of subjects) {
+            await this.reloadSubject(config, false); // don't render yet
+        }
+    }
+
+    public async reloadSubject(config: import('./settings/schema').SubjectConfigEntry, render = true) {
+        if (!config.subjectDefinitionPath) return;
+        
+        const loader = await import('./core/subject/SubjectLoader');
+        const definition = await loader.parseSubjectDefinitionFile(this.app, config.subjectDefinitionPath);
+        
+        if (definition) {
+             const active: import('./core/subject').ActiveSubject = {
+                 name: config.name,
+                 definition: definition,
+                 notesDir: config.notesDir,
+                 photosDir: config.photosDir,
+                 llmLabel: config.llmLabel 
+             };
+             this.subjectRegistry.registerSubject(active);
+             if (render) this.renderRibbons();
+        }
+    }
+
+    // Render ribbon icons for all registered subjects
+    public renderRibbons() {
+        // Clear existing ribbons
+        this.ribbonEls.forEach(el => el.remove());
+        this.ribbonEls = [];
+
+        const subjects = this.subjectRegistry.subjects;
+        
+        // If no subjects, maybe show a generic "configure" icon? Or just nothing.
+        // For now, nothing.
+        
+        for (const subject of subjects) {
+            const icon = subject.definition.ribbonIcon || RIBBON_ICON;
+            const title = subject.definition.ribbonTitle || `Create ${subject.name}`;
+            
+            const ribbonEl = this.addRibbonIcon(icon, title, () => {
+                this.core.processSelection(subject);
+            });
+            this.ribbonEls.push(ribbonEl);
+        }
     }
 }
+
 

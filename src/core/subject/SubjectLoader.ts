@@ -1,6 +1,6 @@
 import { App, TFile, parseYaml, Notice } from 'obsidian';
 import { FileDefinedSubject } from './FileDefinedSubject';
-import { SubjectRegistry } from './index';
+import { SubjectDefinition, SubjectInfoBase } from './types';
 import { SubjectDefinitionFile } from './file_schema';
 
 /**
@@ -9,14 +9,14 @@ import { SubjectDefinitionFile } from './file_schema';
  * 
  * @param filePath Vault-relative path to the subject definition file.
  */
-export async function loadSubjectDefinition(app: App, filePath: string, registry: SubjectRegistry): Promise<boolean> {
-  if (!filePath) return false;
+export async function parseSubjectDefinitionFile(app: App, filePath: string): Promise<SubjectDefinition<SubjectInfoBase> | null> {
+  if (!filePath) return null;
 
   const file = app.vault.getAbstractFileByPath(filePath);
   
   if (!file || !(file instanceof TFile)) {
     console.warn(`[NoteMakerAI] No subject definition file found at ${filePath}.`);
-    return false;
+    return null;
   }
 
   try {
@@ -26,8 +26,7 @@ export async function loadSubjectDefinition(app: App, filePath: string, registry
     if (!yamlContent) {
       new Notice(`NoteMakerAI: Subject definition file "${filePath}" is empty or invalid.`);
       console.warn(`[NoteMakerAI] ${filePath} is empty or invalid.`);
-      // We do not fallback automatically here; partial failure might be confusing.
-      return false;
+      return null;
     }
 
     const parsed = parseYaml(yamlContent) as SubjectDefinitionFile;
@@ -36,19 +35,15 @@ export async function loadSubjectDefinition(app: App, filePath: string, registry
     if (!parsed.subject_name || !parsed.properties) {
       new Notice(`Invalid subject definition in ${filePath}. Missing required fields.`);
       console.error("[NoteMakerAI] Invalid subject definition:", parsed);
-      return false;
+      return null;
     }
 
-    const newSubject = new FileDefinedSubject(parsed);
-    registry.setActiveSubject(newSubject);
-    
-    console.log(`[NoteMakerAI] Loaded subject definition for "${parsed.subject_name}" from ${filePath}`);
-    return true;
+    return new FileDefinedSubject(parsed);
 
   } catch (e) {
     console.error(`[NoteMakerAI] Failed to load subject definition from ${filePath}`, e);
     new Notice(`Failed to load subject definition: ${e}`);
-    return false;
+    return null;
   }
 }
 

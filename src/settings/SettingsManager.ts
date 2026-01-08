@@ -19,7 +19,21 @@ export class SettingsManager {
       folders: { ...DEFAULT_SETTINGS.folders, ...stored?.folders },
       image: { ...DEFAULT_SETTINGS.image, ...stored?.image },
       llms: stored?.llms ?? DEFAULT_SETTINGS.llms,
+      subjects: stored?.subjects ?? DEFAULT_SETTINGS.subjects,
     };
+
+    // MIGRATION: If no subjects are defined but we have legacy folders, create a default subject
+    if ((!stored?.subjects || stored.subjects.length === 0) && this._settings.folders) {
+      const f = this._settings.folders;
+      this._settings.subjects.push({
+        name: "Default Subject",
+        notesDir: f.notes,
+        photosDir: f.photos,
+        subjectDefinitionPath: f.subjectDefinitionLocation || "",
+        llmLabel: f.llmLabel
+      });
+      console.log("[NoteMakerAI] Migrated legacy folder settings to 'Default Subject'.");
+    }
   }
 
   async save() {

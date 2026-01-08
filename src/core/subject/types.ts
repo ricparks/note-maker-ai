@@ -99,3 +99,15 @@ export interface SubjectDefinition<T extends SubjectInfoBase = SubjectInfoBase> 
   /** Optional hook to validate parsed data and return a list of warning messages. */
   validateParsedData?(info: T): string[];
 }
+
+/**
+ * Represents a fully configured subject ready for use by the core.
+ * It packages the behavior (SubjectDefinition) with the configuration (folders, LLM).
+ */
+export interface ActiveSubject {
+  name: string;
+  definition: SubjectDefinition<SubjectInfoBase>;
+  notesDir: string;
+  photosDir: string;
+  llmLabel?: string;
+}

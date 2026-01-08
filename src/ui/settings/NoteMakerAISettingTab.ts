@@ -52,69 +52,148 @@ export class NoteMakerAISettingTab extends PluginSettingTab {
 			.setName("Version")
 			.setDesc(this.plugin.manifest.version);
 
-		// FOLDERS
-		containerEl.createEl("h3", { text: "Folders" });
-		
+		// SUBJECTS
+		containerEl.createEl("h3", { text: "Subjects" });
+		const subjectsWrap = containerEl.createEl("div", { cls: "notemaker-subjects-list" });
 
+		const renderSubjects = () => {
+			subjectsWrap.empty();
+			const subjects = this.plugin.settings.subjects || [];
+			
+			subjects.forEach((subject, idx) => {
+				const card = subjectsWrap.createEl("div", { cls: "notemaker-subject-card" });
+				card.style.border = "1px solid var(--background-modifier-border)";
+				card.style.borderRadius = "8px";
+				card.style.padding = "12px";
+				card.style.marginBottom = "12px";
+				card.style.backgroundColor = "var(--background-secondary)";
 
-		// Hack: Invisible focus trap to prevent "Notes Folder" (first input) from auto-focusing and opening suggestion dropdown
-		const focusTrap = containerEl.createEl("input", { type: "text" }); 
-		focusTrap.style.opacity = "0"; 
-		focusTrap.style.width = "0"; 
-		focusTrap.style.height = "0"; 
-		focusTrap.style.position = "absolute";
+				// Header: Name + Loading styling
+				const header = card.createEl("div");
+				header.style.display = "flex";
+				header.style.justifyContent = "space-between";
+				header.style.marginBottom = "10px";
+				header.createEl("h4", { text: subject.name || "Untitled Subject", cls: "setting-item-name" }).style.margin = "0";
 
-		new Setting(containerEl)
-			.setName("Notes Folder")
-			.setDesc("Where to save new notes.")
-			.addText((text) => {
-				text.setPlaceholder(`e.g. ${SUBJECT_DIR}`)
-					.setValue(this.plugin.settings.folders.notes)
-					.onChange(async (value) => {
-						this.plugin.settings.folders.notes = value.trim();
-						await this.plugin.saveSettings();
-					});
-				new FolderSuggest(this.app, text.inputEl, async (picked) => {
-					this.plugin.settings.folders.notes = picked;
+				// Delete Button
+				const delBtn = header.createEl("button", { text: "Delete" });
+				delBtn.addClass("mod-warning");
+				delBtn.onclick = async () => {
+					if (!confirm(`Delete subject "${subject.name}"?`)) return;
+					this.plugin.settings.subjects.splice(idx, 1);
 					await this.plugin.saveSettings();
-				});
-			});
+					await this.plugin.renderRibbons();
+					renderSubjects();
+				};
 
-		new Setting(containerEl)
-			.setName("Photos Folder")
-			.setDesc("Where to save/move images.")
-			.addText((text) => {
-				text.setPlaceholder(`e.g. ${SUBJECT_PHOTOS_DIR}`)
-					.setValue(this.plugin.settings.folders.photos)
-					.onChange(async (value) => {
-						this.plugin.settings.folders.photos = value.trim();
-						await this.plugin.saveSettings();
+				// Fields
+				// Name
+				new Setting(card)
+					.setName("Subject Name")
+					.setDesc("Name used in menus and ribbons.")
+					.addText(text => text
+						.setValue(subject.name)
+						.onChange(async (val) => {
+							subject.name = val;
+							await this.plugin.saveSettings();
+							// Debounce ribbon update? For now just save.
+							// Header update
+							const h4 = header.querySelector("h4");
+							if (h4) h4.textContent = val || "Untitled Subject";
+							await this.plugin.renderRibbons();
+						}));
+
+				// Definition Path
+				new Setting(card)
+					.setName("Definition File")
+					.setDesc("Path to the Subject Definition File (SDF).")
+					.addText(text => {
+						text.setPlaceholder("e.g. settings/RecipeSubject.md")
+							.setValue(subject.subjectDefinitionPath)
+							.onChange(async (val) => {
+								subject.subjectDefinitionPath = val;
+								await this.plugin.saveSettings();
+								// Trigger reload of this subject
+								await (this.plugin as any).reloadSubject(subject);
+							});
+						new FolderSuggest(this.app, text.inputEl, async (picked) => {
+							subject.subjectDefinitionPath = picked;
+							await this.plugin.saveSettings();
+							await (this.plugin as any).reloadSubject(subject);
+						});
 					});
-				new FolderSuggest(this.app, text.inputEl, async (picked) => {
-					this.plugin.settings.folders.photos = picked;
-					await this.plugin.saveSettings();
-				});
-			});
-		
-		new Setting(containerEl)
-			.setName("Subject Definition File")
-			.setDesc("A markdown file defining the subject processing instructions (frontmatter & sections).")
-			.addText((text) => {
-				text.setPlaceholder("e.g. SubjectDef.md")
-					.setValue(this.plugin.settings.folders.subjectDefinitionLocation || "")
-					.onChange(async (value) => {
-						this.plugin.settings.folders.subjectDefinitionLocation = value.trim();
-						await this.plugin.saveSettings();
-						// Reload subject definition and refresh ribbon when path changes
-						await this.plugin.reloadSubjectDefinition();
+
+				// Notes Dir
+				new Setting(card)
+					.setName("Notes Folder")
+					.setDesc("Where to save new notes for this subject.")
+					.addText(text => {
+						text.setPlaceholder(`e.g. ${SUBJECT_DIR}`)
+							.setValue(subject.notesDir)
+							.onChange(async (val) => {
+								subject.notesDir = val;
+								await this.plugin.saveSettings();
+							});
+						new FolderSuggest(this.app, text.inputEl, async (picked) => {
+							subject.notesDir = picked;
+							await this.plugin.saveSettings();
+						});
 					});
-				new FolderSuggest(this.app, text.inputEl, async (picked) => {
-					this.plugin.settings.folders.subjectDefinitionLocation = picked;
-					await this.plugin.saveSettings();
-					// Reload subject definition and refresh ribbon when path changes
-					await this.plugin.reloadSubjectDefinition();
-				});
+
+				// Photos Dir
+				new Setting(card)
+					.setName("Photos Folder")
+					.setDesc("Where to save/move images.")
+					.addText(text => {
+						text.setPlaceholder(`e.g. ${SUBJECT_PHOTOS_DIR}`)
+							.setValue(subject.photosDir)
+							.onChange(async (val) => {
+								subject.photosDir = val;
+								await this.plugin.saveSettings();
+							});
+						new FolderSuggest(this.app, text.inputEl, async (picked) => {
+							subject.photosDir = picked;
+							await this.plugin.saveSettings();
+						});
+					});
+
+				// LLM Override
+				new Setting(card)
+					.setName("LLM Override")
+					.setDesc("Optional. Use a specific LLM for this subject.")
+					.addDropdown(dd => {
+						dd.addOption("", "Default (Global Setting)");
+						const llms = this.plugin.settings.llms || [];
+						llms.forEach(l => dd.addOption(l.label, l.label));
+						dd.setValue(subject.llmLabel || "");
+						dd.onChange(async (val) => {
+							subject.llmLabel = val || undefined;
+							await this.plugin.saveSettings();
+							await (this.plugin as any).reloadSubject(subject); // Update active subject config
+						});
+					});
 			});
+		};
+
+		renderSubjects();
+
+		const addSubjectWrap = containerEl.createEl("div", { cls: "notemaker-add-subject" });
+		addSubjectWrap.style.display = "flex";
+		addSubjectWrap.style.justifyContent = "center";
+		addSubjectWrap.style.marginBottom = "24px";
+
+		const addBtn = addSubjectWrap.createEl("button", { text: "+ Add New Subject" });
+		addBtn.addClass("mod-cta");
+		addBtn.onclick = async () => {
+			this.plugin.settings.subjects.push({
+				name: "New Subject",
+				notesDir: SUBJECT_DIR,
+				photosDir: SUBJECT_PHOTOS_DIR,
+				subjectDefinitionPath: "",
+			});
+			await this.plugin.saveSettings();
+			renderSubjects();
+		};
 
 		// LLM CONFIGURATION
 		const ensureLlmArray = () => {
@@ -166,6 +245,7 @@ export class NoteMakerAISettingTab extends PluginSettingTab {
 			if (needsSave) {
 				await this.plugin.saveSettings();
 			}
+			renderSubjects();
 		};
 
 		const generateUniqueLlmLabel = () => {
@@ -225,9 +305,7 @@ export class NoteMakerAISettingTab extends PluginSettingTab {
 					if (this.plugin.settings.defaultLlmLabel === previous) {
 						this.plugin.settings.defaultLlmLabel = val;
 					}
-					if (this.plugin.settings.folders.llmLabel === previous) {
-						this.plugin.settings.folders.llmLabel = val;
-					}
+
 					await this.plugin.saveSettings();
 					await refreshLlmDependentSelects();
 				};
@@ -390,9 +468,7 @@ export class NoteMakerAISettingTab extends PluginSettingTab {
 						) {
 							this.plugin.settings.defaultLlmLabel = llms[0]?.label;
 						}
-						if (this.plugin.settings.folders.llmLabel === removed.label) {
-							this.plugin.settings.folders.llmLabel = undefined;
-						}
+
 					}
 					await this.plugin.saveSettings();
 					renderLlmRows();
