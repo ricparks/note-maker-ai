@@ -170,8 +170,7 @@ ${trailing_prompt}`;
     }
 
     // Add System Properties (Standard to NoteMakerAI)
-    frontmatterLines.push(`is_reviewed: `);
-    frontmatterLines.push(`is_digital: `);
+
     
     if (context.coverFileName) {
       frontmatterLines.push(`photo: "[[${context.coverFileName}]]"`);

@@ -7,7 +7,7 @@ naming:
     photo: "{{author}}_{{title}}_{{publicationDate}}"
 
 validate_subject: true
-validation_threshold: 0.8
+validation_threshold: 0.7
 
 properties: 
     - key: "title" 
@@ -28,6 +28,10 @@ properties:
       instruction: "ISBN-10 or ISBN-13; prefer ISBN-13 if both are present. Return digits only (remove hyphens and spaces). If unknown, return empty string."
     - key: "genres"
       instruction: "Comma-separated list of 1-5 genres"
+    - key: "is_reviewed"
+      instruction: "Leave blank"
+    - key: "is_digital"
+      instruction: "Leave blank"
       
 sections: 
     - heading: "Summary" 
