@@ -86,12 +86,12 @@ export class NoteMakerAISettingTab extends PluginSettingTab {
 					renderSubjects();
 				};
 
-				// Fields
 				// Name
 				new Setting(card)
 					.setName("Subject Name")
 					.setDesc("Name used in menus and ribbons.")
 					.addText(text => text
+						.setPlaceholder("e.g. Books, Recipes, Wine")
 						.setValue(subject.name)
 						.onChange(async (val) => {
 							subject.name = val;
@@ -186,9 +186,9 @@ export class NoteMakerAISettingTab extends PluginSettingTab {
 		addBtn.addClass("mod-cta");
 		addBtn.onclick = async () => {
 			this.plugin.settings.subjects.push({
-				name: "New Subject",
-				notesDir: SUBJECT_DIR,
-				photosDir: SUBJECT_PHOTOS_DIR,
+				name: "",
+				notesDir: "",
+				photosDir: "",
 				subjectDefinitionPath: "",
 			});
 			await this.plugin.saveSettings();

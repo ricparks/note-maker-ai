@@ -72,7 +72,7 @@ export const DEFAULT_SETTINGS: NoteMakerAISettings = {
   },
   subjects: [],
   image: {
-    keepOriginalAfterResize: false,
+    keepOriginalAfterResize: true,
     orientation: 'maintain',
     rotationDirection: 'clockwise',
   },

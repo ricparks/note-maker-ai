@@ -93,10 +93,10 @@ export class NoteMakerCore {
 	constructor(private plugin: NoteMakerAI, private registry: SubjectRegistry) {}
 
 	/**
-	 * Helper to get a default subject if none is provided contextually.
-	 * (e.g. command palette usage).
+	 * Helper to get the first available subject if none is provided contextually.
+	 * Returns undefined if no subjects are configured.
 	 */
-	private get defaultSubject(): import("./subject").ActiveSubject | undefined {
+	private get firstSubject(): import("./subject").ActiveSubject | undefined {
 		if (this.registry.subjects.length > 0) return this.registry.subjects[0];
 		return undefined;
 	}
@@ -108,9 +108,9 @@ export class NoteMakerCore {
 	 * If single or no selection, falls back to processing the active file.
 	 */
 	async processSelection(explicitSubject?: import("./subject").ActiveSubject): Promise<void> {
-		const subject = explicitSubject || this.defaultSubject;
+		const subject = explicitSubject || this.firstSubject;
 		if (!subject) {
-			new (require("obsidian").Notice)("No subjects configured. checks settings.");
+			new (require("obsidian").Notice)("No Subject Definition File configured. Please set one in Settings > NoteMaker AI.");
 			return;
 		}
 		this.redoContext = null;
@@ -189,7 +189,7 @@ export class NoteMakerCore {
 	 * Processes the currently active workspace file.
 	 */
 	async processActiveFile(subject?: import("./subject").ActiveSubject): Promise<void> {
-		if (!subject) subject = this.defaultSubject;
+		if (!subject) subject = this.firstSubject;
 		if (!subject) return;
 
 		this.redoContext = null;
@@ -1053,7 +1053,7 @@ export class NoteMakerCore {
 
 		// Fallback for legacy calls (should not happen in proper usage)
 		const folders = this.plugin.settings.folders;
-		const defaultFolder = this.defaultSubject?.definition.directory || SUBJECT_DIR; // fallback to active subject if generic
+		const defaultFolder = this.firstSubject?.definition.directory || SUBJECT_DIR; // fallback to active subject if generic
 
 		const notesDir = folders?.notes?.trim() || defaultFolder;
 		const photosDir = folders?.photos?.trim() || `${notesDir}/photos`;

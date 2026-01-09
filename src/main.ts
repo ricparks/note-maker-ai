@@ -39,10 +39,10 @@ export default class NoteMakerAI extends Plugin {
              this.renderRibbons();
         });
 
-        // Register global command (uses default subject if available)
+        // Register global command (uses the first configured subject)
         this.addCommand({
             id: 'create-note-from-image-default',
-            name: 'Create note from image (Default Subject)',
+            name: 'Create note from image',
             callback: () => {
                 this.core.processSelection();
             },
@@ -82,6 +82,7 @@ export default class NoteMakerAI extends Plugin {
         
         if (subjects.length === 0) {
             console.log("[NoteMakerAI] No subjects configured.");
+            new (require('obsidian').Notice)("NoteMaker AI: No Subject Definition File configured. Please set one in Settings.");
             return;
         }
 

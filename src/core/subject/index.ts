@@ -1,7 +1,5 @@
 export { type ActiveSubject, type SubjectDefinition, type SubjectInfoBase, type SubjectNoteData, type SubjectExistingNoteContext, type SubjectPromptContext, type SubjectNoteSections } from './types';
-import { defaultSubject } from './defaults';
 import type { ActiveSubject, SubjectDefinition, SubjectInfoBase } from './types';
-import { SUBJECT_DIR, SUBJECT_PHOTOS_DIR } from '../../utils/constants';
 
 /**
  * Registry to manage active subject definitions.
