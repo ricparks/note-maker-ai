@@ -34,6 +34,11 @@ export default class NoteMakerAI extends Plugin {
         // Use onLayoutReady to ensure mobile UI is ready for ribbons
         this.app.workspace.onLayoutReady(async () => {
              console.log("[NoteMakerAI] Layout ready, loading subjects...");
+             
+             // On mobile, the vault may not be fully indexed when layout is ready.
+             // Wait for the metadata cache to finish initial indexing.
+             await this.waitForVaultReady();
+             
              // Load all configured subjects
              await this.loadAllSubjects();
              this.renderRibbons();
@@ -72,6 +77,36 @@ export default class NoteMakerAI extends Plugin {
     // This function runs when your plugin is disabled
     onunload() {
         // No cleanup needed for this simple version
+    }
+
+    /**
+     * Wait for the vault/metadata cache to be ready.
+     * On mobile, onLayoutReady can fire before the vault is fully indexed.
+     * This waits for the 'resolved' event or returns immediately if already resolved.
+     */
+    private waitForVaultReady(): Promise<void> {
+        return new Promise((resolve) => {
+            // Check if metadataCache is already resolved
+            if ((this.app.metadataCache as any).initialized) {
+                console.log("[NoteMakerAI] Metadata cache already initialized.");
+                resolve();
+                return;
+            }
+            
+            // Otherwise, wait for the 'resolved' event
+            const handler = () => {
+                console.log("[NoteMakerAI] Metadata cache resolved event fired.");
+                resolve();
+            };
+            
+            this.app.metadataCache.on('resolved', handler);
+            
+            // Also add a timeout fallback in case 'resolved' already fired
+            setTimeout(() => {
+                console.log("[NoteMakerAI] Vault ready timeout fallback.");
+                resolve();
+            }, 2000);
+        });
     }
 
     async saveSettings() { await this.settingsManager.save(); }
