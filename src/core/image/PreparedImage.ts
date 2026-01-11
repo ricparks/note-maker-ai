@@ -147,40 +147,85 @@ export class PreparedImage {
     const photosDir = this.photosDir || `${this.subjectDir}/${this.photosSubdir}`;
     await this.ensureFolder(photosDir);
 
+    const baseName = this.sourceFile.name.replace(/\.[^.]+$/, '');
+
     if (!this.needsResize) {
-      // move if needed, else leave in place
+      // 1. MOVE Logic
       const isInPhotos = this.sourceFile.path.startsWith(`${photosDir}/`);
-      if (!isInPhotos) {
-        const newPath = `${photosDir}/${this.sourceFile.name}`;
-        this.logInfo('Moving image into photos directory.');
-        await this.app.fileManager.renameFile(this.sourceFile, newPath);
-        const moved = this.app.vault.getAbstractFileByPath(newPath) as TFile | null;
-        if (!moved) throw new Error('move-failed');
-        this.persistedFile = moved;
-      } else {
+      if (isInPhotos) {
         this.logInfo('Image already within size limits and in photos directory.');
         this.persistedFile = this.sourceFile;
+        return this.persistedFile;
       }
-      return this.persistedFile!;
+
+      this.logInfo('Moving image into photos directory.');
+      
+      // Try to move, handling collisions
+      let counter = 1;
+      while (true) {
+        // Strategy: photo.ext, photo 2.ext, photo 3.ext
+        const suffix = counter === 1 ? '' : ` ${counter}`;
+        const candidateName = `${baseName}${suffix}.${this.sourceFile.extension}`;
+        const candidatePath = `${photosDir}/${candidateName}`;
+        
+        // Soft check via cache
+        if (this.app.vault.getAbstractFileByPath(candidatePath)) {
+            counter++;
+            continue;
+        }
+
+        try {
+            await this.app.fileManager.renameFile(this.sourceFile, candidatePath);
+            // Verify success
+            const moved = this.app.vault.getAbstractFileByPath(candidatePath) as TFile | null;
+            if (!moved) throw new Error('move-failed-verification');
+            this.persistedFile = moved;
+            return this.persistedFile;
+        } catch (error: any) {
+            if (error.message && error.message.includes('File already exists')) {
+                this.logInfo(`Collision moving to ${candidateName}, retrying...`);
+                counter++;
+                continue;
+            }
+            throw error;
+        }
+      }
     }
 
-    // needsResize: write JPEG to photos/
+    // 2. RESIZE/WRITE Logic
     if (!this.preparedBuf) throw new Error('prepared-buffer-missing');
-    const baseName = this.sourceFile.name.replace(/\.[^.]+$/, '');
-    let candidate = `${baseName}.jpg`;
+    
     let counter = 1;
-    while (this.app.vault.getAbstractFileByPath(`${photosDir}/${candidate}`)) {
-      candidate = `${baseName}-resized${counter === 1 ? '' : '-' + counter}.jpg`;
-      counter++;
-    }
-    const finalPath = `${photosDir}/${candidate}`;
-    this.logInfo(`Writing JPEG: ${candidate} (${this.preparedWidth}×${this.preparedHeight}).`);
-    // @ts-ignore createBinary exists at runtime
-    const created = await (this.app.vault as any).createBinary(finalPath, this.preparedBuf);
-    this.persistedFile = created as TFile;
+    while (true) {
+        // Strategy: photo.jpg -> photo-resized.jpg -> photo-resized-2.jpg
+        let candidateName = `${baseName}.jpg`;
+        if (counter === 2) candidateName = `${baseName}-resized.jpg`;
+        else if (counter > 2) candidateName = `${baseName}-resized-${counter - 1}.jpg`;
 
-    this.persistedFile = created as TFile;
-    return this.persistedFile;
+        const finalPath = `${photosDir}/${candidateName}`;
+        
+        // Soft check
+        if (this.app.vault.getAbstractFileByPath(finalPath)) {
+            counter++;
+            continue;
+        }
+
+        this.logInfo(`Writing JPEG: ${candidateName} (${this.preparedWidth}×${this.preparedHeight}).`);
+        
+        try {
+             // @ts-ignore createBinary exists at runtime
+            const created = await (this.app.vault as any).createBinary(finalPath, this.preparedBuf);
+            this.persistedFile = created as TFile;
+            return this.persistedFile;
+        } catch (error: any) {
+             if (error.message && error.message.includes('File already exists')) {
+                this.logInfo(`Collision writing ${candidateName}, retrying...`);
+                counter++;
+                continue;
+            }
+            throw error;
+        }
+    }
   }
 
   /**

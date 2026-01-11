@@ -9,13 +9,13 @@ import { SubjectDefinitionFile } from './file_schema';
  * 
  * @param filePath Vault-relative path to the subject definition file.
  */
-export async function parseSubjectDefinitionFile(app: App, filePath: string): Promise<SubjectDefinition<SubjectInfoBase> | null> {
+export async function parseSubjectDefinitionFile(app: App, filePath: string, suppressLog = false): Promise<SubjectDefinition<SubjectInfoBase> | null> {
   if (!filePath) return null;
 
   const file = app.vault.getAbstractFileByPath(filePath);
   
   if (!file || !(file instanceof TFile)) {
-    console.warn(`[NoteMakerAI] No subject definition file found at ${filePath}.`);
+    if (!suppressLog) console.warn(`[NoteMakerAI] No subject definition file found at ${filePath}.`);
     return null;
   }
 

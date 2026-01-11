@@ -126,26 +126,32 @@ export default class NoteMakerAI extends Plugin {
         }
     }
 
+
     public async reloadSubject(config: import('./settings/schema').SubjectConfigEntry, render = true) {
         if (!config.subjectDefinitionPath) return;
         
         // Use static loader
-        const definition = await SubjectLoader.parseSubjectDefinitionFile(this.app, config.subjectDefinitionPath);
+        const definition = await SubjectLoader.parseSubjectDefinitionFile(this.app, config.subjectDefinitionPath, true);
         
-        if (definition) {
-             const active: import('./core/subject').ActiveSubject = {
-                 name: config.name,
-                 definition: definition,
-                 notesDir: config.notesDir,
-                 photosDir: config.photosDir,
-                 llmLabel: config.llmLabel 
-             };
-             this.subjectRegistry.registerSubject(active);
-             this.registerSubjectCommand(active);
-             if (render) this.renderRibbons();
-        } else {
-            console.warn(`[NoteMakerAI] Failed to load definition for ${config.name} at ${config.subjectDefinitionPath}`);
+        // Register subject regardless of definition load status (lazy validation)
+        const active: import('./core/subject').ActiveSubject = {
+            name: config.name,
+            definition: definition || undefined,
+            subjectDefinitionPath: config.subjectDefinitionPath,
+            notesDir: config.notesDir,
+            photosDir: config.photosDir,
+            llmLabel: config.llmLabel 
+        };
+        this.subjectRegistry.registerSubject(active);
+        
+        // Only warn if we failed but only if not just partially typed (heuristic?)
+        // Actually, user wants deferred validation. So we log info instead of warn to reduce console noise during typing.
+        if (!definition) {
+            console.log(`[NoteMakerAI] Definition not loaded for ${config.name} at ${config.subjectDefinitionPath} (deferred).`);
         }
+        
+        this.registerSubjectCommand(active);
+        if (render) this.renderRibbons();
     }
 
     private registerSubjectCommand(subject: import('./core/subject').ActiveSubject) {
@@ -171,6 +177,10 @@ export default class NoteMakerAI extends Plugin {
         console.log(`[NoteMakerAI] Rendering ribbons for ${subjects.length} subjects.`);
         
         for (const subject of subjects) {
+            // Lazy load check: if definition missing, do NOT render a ribbon at all.
+            // This prevents "bad" icons or ghost icons for subjects that aren't fully configured.
+            if (!subject.definition) continue;
+
             const icon = subject.definition.ribbonIcon || RIBBON_ICON;
             const title = subject.definition.ribbonTitle || `Create ${subject.name}`;
             

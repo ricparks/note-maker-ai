@@ -106,7 +106,8 @@ export interface SubjectDefinition<T extends SubjectInfoBase = SubjectInfoBase> 
  */
 export interface ActiveSubject {
   name: string;
-  definition: SubjectDefinition<SubjectInfoBase>;
+  definition?: SubjectDefinition<SubjectInfoBase>;
+  subjectDefinitionPath: string;
   notesDir: string;
   photosDir: string;
   llmLabel?: string;
