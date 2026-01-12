@@ -1,3 +1,4 @@
+import { stringifyYaml } from 'obsidian';
 import { SubjectDefinition, SubjectInfoBase, SubjectNoteData, SubjectExistingNoteContext, SubjectPromptContext } from './types';
 import { SubjectDefinitionFile } from './file_schema';
 
@@ -14,7 +15,7 @@ export class FileDefinedSubject implements SubjectDefinition<SubjectInfoBase> {
   public validationThreshold?: number;
 
   constructor(private definition: SubjectDefinitionFile) {
-    this.id = this.sanitizeId(definition.subject_name);
+    this.id = definition.id || this.sanitizeId(definition.subject_name);
     this.ribbonIcon = definition.icon || 'star';
     this.ribbonTitle = `Create ${definition.subject_name} note`;
     this.validateSubject = definition.validate_subject ?? false;
@@ -165,41 +166,42 @@ ${trailing_prompt}`;
     const { properties, sections } = this.definition;
     const fields = info.fields as Record<string, any>;
 
-    // 1. Build Frontmatter
-    const frontmatterLines: string[] = [];
-    frontmatterLines.push('---');
+    // 1. Build Frontmatter Object
+    const frontmatterObj: Record<string, any> = {};
     
     // Add dynamic properties
     for (const prop of properties) {
       let val = fields[prop.key];
+      // Keep empty strings if that's what we want, or undefined to omit?
+      // Legacy behavior: "undefined || null -> ''"
       if (val === undefined || val === null) val = '';
       
-      // Escape double quotes in strings
-      if (typeof val === 'string') {
-        val = `"${val.replace(/"/g, '\\"')}"`;
-      }
-      frontmatterLines.push(`${prop.key}: ${val}`);
+      frontmatterObj[prop.key] = val;
     }
 
     // Add System Properties (Standard to NoteMakerAI)
-
-    
+    // We format the photo link manually as a string "[[filename]]" to match Obsidian expectations
     if (context.coverFileName) {
-      frontmatterLines.push(`photo: "[[${context.coverFileName}]]"`);
+      frontmatterObj['photo'] = `[[${context.coverFileName}]]`;
     } else {
-      frontmatterLines.push(`photo: ""`);
+      frontmatterObj['photo'] = "";
     }
 
     // Origin tracker
-    frontmatterLines.push(`note_created_by: "${this.definition.subject_name}"`);
+    frontmatterObj['note_created_by'] = this.definition.subject_name;
     if (context.llmModel) {
-      frontmatterLines.push(`llm-model: "${context.llmModel}"`);
+      frontmatterObj['llm-model'] = context.llmModel;
     }
 
-    frontmatterLines.push('---');
+    // Serialize using Obsidian API
+    const yamlString = stringifyYaml(frontmatterObj).trim();
 
     // 2. Build Content
     const contentLines: string[] = [];
+    
+    contentLines.push('---');
+    contentLines.push(yamlString);
+    contentLines.push('---');
 
     // Framework Section: My Notes (Must exist for Redo)
     contentLines.push(`#### My Notes`);
@@ -230,7 +232,7 @@ ${trailing_prompt}`;
       contentLines.push(`![[${context.coverFileName}]]`);
     }
 
-    return [...frontmatterLines, ...contentLines].join('\n');
+    return contentLines.join('\n');
   }
 
   // --- Re-used Utilities ---
@@ -268,7 +270,20 @@ ${trailing_prompt}`;
   }
 
   validateParsedData(info: SubjectInfoBase): string[] {
-    // Generic validation?
-    return [];
+    const warnings: string[] = [];
+    const fields = info.fields as Record<string, any>;
+
+    // Check strict adherence to schema
+    for (const prop of this.definition.properties) {
+      // If a property has a default, we don't care if AI missed it (parse() fills it)
+      // But if it has NO default, we expect AI to return it (even if empty string)
+      if (prop.default === undefined) {
+        if (fields[prop.key] === undefined) {
+          warnings.push(`AI response missing expected field: '${prop.key}'`);
+        }
+      }
+    }
+    
+    return warnings;
   }
 }

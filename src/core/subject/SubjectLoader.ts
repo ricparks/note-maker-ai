@@ -137,6 +137,9 @@ function validateSubjectDefinition(def: any): string[] {
   }
 
   // 5. Types check for optionals
+  if (def.id !== undefined && typeof def.id !== 'string') {
+    errors.push("'id' must be a string.");
+  }
   if (def.validate_subject !== undefined && typeof def.validate_subject !== 'boolean') {
     errors.push("'validate_subject' must be a boolean.");
   }

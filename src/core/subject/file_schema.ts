@@ -20,6 +20,7 @@ export interface FileDefinedNaming {
  * parsed from YAML/JSON content blocks.
  */
 export interface SubjectDefinitionFile {
+  id?: string; // Optional stable identifier
   subject_name: string;
   icon: string;
   naming: FileDefinedNaming;

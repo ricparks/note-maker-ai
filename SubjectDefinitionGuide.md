@@ -12,6 +12,7 @@ The file uses a YAML block (like frontmatter) to define the configuration.
 
 ```yaml
 subject_name: "Wines"
+id: "custom_wines_v1" # Optional: Stable ID regardless of name changes
 icon: "wine"
 
 # Enable photo verification (optional)
@@ -24,19 +25,19 @@ naming:
 
 properties:
     - key: "name"
-      instruction: "Name of the wine"
+    instruction: "Name of the wine"
     - key: "producer"
-      instruction: "Winery or producer name"
+    instruction: "Winery or producer name"
     - key: "year"
-      instruction: "Vintage year"
+    instruction: "Vintage year"
     - key: "is_reviewed"
-      default: false
-      # If 'default' is present and 'instruction' is omitted, the AI will NOT be asked to extract this field.
-      # The value will be automatically inserted into the note properties.
+    default: false
+    # If 'default' is present and 'instruction' is omitted, the AI will NOT be asked to extract this field.
+    # The value will be automatically inserted into the note properties.
 
 sections:
     - heading: "Tasting Notes"
-      instruction: "Describe flavor profile, body, and acidity."
+    instruction: "Describe flavor profile, body, and acidity."
 
 lead_prompt: "You are a sommelier. Analyze the wine label..."
 trailing_prompt: "Return valid JSON..."
@@ -49,6 +50,7 @@ trailing_prompt: "Return valid JSON..."
 | Field | Type | Description |
 | :--- | :--- | :--- |
 | `subject_name` | String | **Required.** The display name for the subject (e.g., "Wine"). |
+| `id` | String | **Optional.** A stable unique identifier. If omitted, generated from `subject_name`. Use this to safely rename subjects later. |
 | `icon` | String | **Required.** The name of an Obsidian UI icon (e.g., "wine", "book", "camera"). |
 | `validate_subject` | Boolean | **Optional.** If `true`, the AI will verify if the image matches the subject before creating a note. |
 | `validation_threshold`| Number | **Optional.** Confidence level (0.0 - 1.0) required to trigger a warning. Default is 0.7. |
