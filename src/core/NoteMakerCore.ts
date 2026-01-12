@@ -436,6 +436,27 @@ export class NoteMakerCore {
 			frontmatter,
 		});
 
+		// Safety Check: Verify subject matches origin
+		// We trust 'note_created_by' in frontmatter if present
+		if (frontmatter && frontmatter['note_created_by']) {
+			const origin = this.sanitizeId(frontmatter['note_created_by']);
+			const target = this.sanitizeId(subject.definition!.id); // or subject.name
+
+			if (origin !== target && origin.length > 0) {
+				const originName = frontmatter['note_created_by']; // Display name
+				const targetName = subject.definition!.id; // Display name equivalent
+
+				const msg = `Subject Mismatch\n\nThis note was originally created as **${originName}**, but you are about to redo it using the **${targetName}** subject.\n\nThis will likely overwrite properties and sections with incorrect data.\n\nAre you sure you want to proceed?`;
+				
+				const res = await confirm(this.plugin.app, msg);
+				if (!res.ok) {
+					progressModal.info("Redo cancelled by user.");
+					progressModal.done(false);
+					return;
+				}
+			}
+		}
+
 		const exifFromNote = this.extractExifFromProperties(noteData.properties);
 		const promptContext: SubjectPromptContext = {};
 		if (noteData) {
@@ -733,6 +754,10 @@ export class NoteMakerCore {
 	}
 
 
+
+	private sanitizeId(name: string): string {
+		return name.toLowerCase().replace(/[^a-z0-9]+/g, '_');
+	}
 
 	private async processAdditionalMedia(
 		noteData: SubjectNoteData,
