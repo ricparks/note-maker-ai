@@ -263,7 +263,7 @@ ${trailing_prompt}`;
     return {
       properties,
       sections,
-      logSummary: `Parsed ${this.id} note: "${properties.title || 'Untitled'}"`
+      logSummary: `Read existing note: "${note.file.basename}"`
     };
   }
 

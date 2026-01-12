@@ -518,10 +518,13 @@ export class NoteMakerCore {
 		} else {
 			progressModal.info("Parsed markdown note");
 		}
-		progressModal.info("Prepared redo prompt");
 
-		progressModal.info("Fetching redo subject data...");
-		const { llmLabelOverride } = this.resolveSubjectDirsAndLlm();
+		if (additions) {
+			progressModal.info("Prompt updated with your custom instructions");
+		}
+		
+		progressModal.info("Analyzing original photo with AI...");
+		const { llmLabelOverride } = this.resolveSubjectDirsAndLlm(subject);
 		const resultCtx = await this.fetchSubjectJson(
 			photoBase64,
 			progressModal,
