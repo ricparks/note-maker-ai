@@ -1,7 +1,8 @@
 
 export interface FileDefinedProperty {
   key: string;
-  instruction: string;
+  instruction?: string;
+  default?: any;
 }
 
 export interface FileDefinedSection {

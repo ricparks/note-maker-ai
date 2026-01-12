@@ -29,6 +29,10 @@ properties:
       instruction: "Winery or producer name"
     - key: "year"
       instruction: "Vintage year"
+    - key: "is_reviewed"
+      default: false
+      # If 'default' is present and 'instruction' is omitted, the AI will NOT be asked to extract this field.
+      # The value will be automatically inserted into the note properties.
 
 sections:
     - heading: "Tasting Notes"
@@ -52,6 +56,9 @@ trailing_prompt: "Return valid JSON..."
 | `naming.note` | String | Template for the markdown note filename. |
 | `naming.photo` | String | Template for the photo filename (saved in the photos folder). |
 | `properties` | Array | **Required.** List of Frontmatter properties to extract. |
+| `properties[].key` | String | **Required.** The key name of the property. |
+| `properties[].instruction` | String | **Optional.** Instruction for the AI. If omitted, `default` must be set. |
+| `properties[].default` | Any | **Optional.** Default value to use if AI extraction fails or if instruction is omitted. |
 | `sections` | Array | **Required.** List of Markdown sections to generate content for. |
 | `lead_prompt` | String | **Required.** The opening instruction to the AI (role and goal). |
 | `trailing_prompt` | String | **Required.** The closing instruction, usually enforcing JSON format. |

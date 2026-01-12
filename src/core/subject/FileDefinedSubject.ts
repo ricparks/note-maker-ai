@@ -35,12 +35,15 @@ export class FileDefinedSubject implements SubjectDefinition<SubjectInfoBase> {
   private buildBasePrompt(): string {
     const { lead_prompt, properties, sections, trailing_prompt } = this.definition;
 
-    const propsList = properties.map(p => `- ${p.key}: ${p.instruction}`).join('\n');
+    // prompt properties: exclude ones that have a default AND no instruction
+    const promptProperties = properties.filter(p => !p.default || p.instruction);
+
+    const propsList = promptProperties.map(p => `- ${p.key}: ${p.instruction || "Extract value"}`).join('\n');
     const sectionsList = sections.map(s => `- ${s.heading}: ${s.instruction}`).join('\n');
     
     // We also construct a robust JSON example dynamically to help the LLM structure correctly
     const exampleObj: Record<string, any> = {};
-    properties.forEach(p => exampleObj[p.key] = "...");
+    promptProperties.forEach(p => exampleObj[p.key] = "...");
     sections.forEach(s => exampleObj[s.heading] = "...");
     
     // Combine standard meta fields that are always requested in trailing_prompt
@@ -141,12 +144,21 @@ ${trailing_prompt}`;
     )?.key;
     const producer = producerKey ? aiJson[producerKey] : '';
 
-    return {
+    const result: SubjectInfoBase = {
       title: String(title),
       producer: String(producer),
       raw: aiJson,
-      fields: aiJson // The fields map 1:1 to the JSON
+      fields: aiJson
     };
+
+    // Inject defaults for any missing keys
+    for (const prop of this.definition.properties) {
+      if (prop.default !== undefined && (result.fields[prop.key] === undefined || result.fields[prop.key] === null || result.fields[prop.key] === "")) {
+        result.fields[prop.key] = prop.default;
+      }
+    }
+
+    return result;
   }
 
   buildNote(info: SubjectInfoBase, context: { coverFileName?: string; llmModel?: string }): string {
