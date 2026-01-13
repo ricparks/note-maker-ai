@@ -1,8 +1,8 @@
 {
 	"id": "note-maker-ai",
 	"name": "NoteMakerAI",
-	"version": "0.03.26",
-	"minAppVersion": "0.15.0",
+	"version": "0.03.27",
+	"minAppVersion": "1.11",
 	"description": "Create structured notes from photos using AI. Analyze subjects and extract metadata automatically.",
 	"author": "Richard Parks",
 	"authorUrl": "https://elementalekos.com",

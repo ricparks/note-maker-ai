@@ -6,6 +6,7 @@ import { RIBBON_ICON, RIBBON_TITLE } from './utils/constants';
 import { SubjectRegistry } from './core/subject';
 import { NoteMakerCore } from './core/NoteMakerCore';
 import * as SubjectLoader from './core/subject/SubjectLoader';
+import { registerCommands, registerSubjectCommand } from './commands';
 
 // Main plugin class kept minimal; business logic lives in NoteMakerCore (core/NoteMakerCore.ts)
 export default class NoteMakerAI extends Plugin {
@@ -44,14 +45,8 @@ export default class NoteMakerAI extends Plugin {
              this.renderRibbons();
         });
 
-        // Register global command (uses the first configured subject)
-        this.addCommand({
-            id: 'create-note-from-image-default',
-            name: 'Create note from image',
-            callback: () => {
-                this.core.processSelection();
-            },
-        });
+        // Register global commands
+        registerCommands(this);
 
         // Watch for changes to any definition file
         this.registerEvent(this.app.vault.on('modify', async (file) => {
@@ -155,16 +150,7 @@ export default class NoteMakerAI extends Plugin {
     }
 
     private registerSubjectCommand(subject: import('./core/subject').ActiveSubject) {
-        const safeName = subject.name.toLowerCase().replace(/\s+/g, '-');
-        const cmdId = `create-note-subject-${safeName}`;
-        
-        this.addCommand({
-            id: cmdId,
-            name: `Create note from image (${subject.name})`,
-            callback: () => {
-                this.core.processSelection(subject);
-            }
-        });
+        registerSubjectCommand(this, subject);
     }
 
     // Render ribbon icons for all registered subjects
