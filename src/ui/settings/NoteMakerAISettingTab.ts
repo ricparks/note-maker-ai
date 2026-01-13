@@ -46,7 +46,9 @@ export class NoteMakerAISettingTab extends PluginSettingTab {
 	display(): void {
 		const { containerEl } = this;
 		containerEl.empty();
-		containerEl.createEl("h3", { text: "NoteMakerAI Settings" });
+
+		// Top-level plugin name heading removed per guidelines
+
 
 		// VERSION (read-only)
 		new Setting(containerEl)
@@ -54,7 +56,8 @@ export class NoteMakerAISettingTab extends PluginSettingTab {
 			.setDesc(this.plugin.manifest.version);
 
 		// SUBJECTS
-		containerEl.createEl("h3", { text: "Subjects" });
+		// SUBJECTS
+		new Setting(containerEl).setName("Subjects").setHeading();
 		const subjectsWrap = containerEl.createEl("div", { cls: "notemaker-subjects-list" });
 
 		const renderSubjects = () => {
@@ -89,7 +92,7 @@ export class NoteMakerAISettingTab extends PluginSettingTab {
 
 				// Name
 				new Setting(card)
-					.setName("Subject Name")
+					.setName("Subject name")
 					.setDesc("Name used in menus and ribbons.")
 					.addText(text => text
 						.setPlaceholder("e.g. Books, Recipes, Wine")
@@ -106,7 +109,7 @@ export class NoteMakerAISettingTab extends PluginSettingTab {
 
 				// Definition Path
 				new Setting(card)
-					.setName("Definition File")
+					.setName("Definition file")
 					.setDesc("Path to the Subject Definition File (SDF).")
 					.addText(text => {
 						text.setPlaceholder("e.g. settings/RecipeSubject.md")
@@ -126,7 +129,7 @@ export class NoteMakerAISettingTab extends PluginSettingTab {
 
 				// Notes Dir
 				new Setting(card)
-					.setName("Notes Folder")
+					.setName("Notes folder")
 					.setDesc("Where to save new notes for this subject.")
 					.addText(text => {
 						text.setPlaceholder(`e.g. ${SUBJECT_DIR}`)
@@ -143,7 +146,7 @@ export class NoteMakerAISettingTab extends PluginSettingTab {
 
 				// Photos Dir
 				new Setting(card)
-					.setName("Photos Folder")
+					.setName("Photos folder")
 					.setDesc("Where to save/move images.")
 					.addText(text => {
 						text.setPlaceholder(`e.g. ${SUBJECT_PHOTOS_DIR}`)
@@ -160,10 +163,10 @@ export class NoteMakerAISettingTab extends PluginSettingTab {
 
 				// LLM Override
 				new Setting(card)
-					.setName("LLM Override")
+					.setName("LLM override")
 					.setDesc("Optional. Use a specific LLM for this subject.")
 					.addDropdown(dd => {
-						dd.addOption("", "Default (Global Setting)");
+						dd.addOption("", "Default (global setting)");
 						const llms = this.plugin.settings.llms || [];
 						llms.forEach(l => dd.addOption(l.label, l.label));
 						dd.setValue(subject.llmLabel || "");
@@ -183,7 +186,7 @@ export class NoteMakerAISettingTab extends PluginSettingTab {
 		addSubjectWrap.style.justifyContent = "center";
 		addSubjectWrap.style.marginBottom = "24px";
 
-		const addBtn = addSubjectWrap.createEl("button", { text: "+ Add New Subject" });
+		const addBtn = addSubjectWrap.createEl("button", { text: "+ Add new subject" });
 		addBtn.addClass("mod-cta");
 		addBtn.onclick = async () => {
 			this.plugin.settings.subjects.push({
@@ -204,7 +207,7 @@ export class NoteMakerAISettingTab extends PluginSettingTab {
 			return this.plugin.settings.llms;
 		};
 
-		containerEl.createEl("h3", { text: "LLMs" });
+		new Setting(containerEl).setName("LLMs").setHeading();
 		containerEl.createEl("hr");
 		const llmWrap = containerEl.createEl("div", {
 			cls: "notemaker-llm-rows",
@@ -527,7 +530,7 @@ export class NoteMakerAISettingTab extends PluginSettingTab {
 		void refreshLlmDependentSelects();
 
 		// IMAGE HANDLING
-		containerEl.createEl("h3", { text: "Images" });
+		new Setting(containerEl).setName("Images").setHeading();
 		new Setting(containerEl)
 			.setName("Keep original after resize")
 			.setDesc(
@@ -553,7 +556,7 @@ export class NoteMakerAISettingTab extends PluginSettingTab {
 			);
 
 		new Setting(containerEl)
-			.setName("Reduced Image Orientation")
+			.setName("Reduced image orientation")
 			.setDesc("Ensure the reduced image matches this orientation.")
 			.addDropdown((dd) => {
 				dd.addOption("maintain", "Maintain original");
@@ -575,11 +578,11 @@ export class NoteMakerAISettingTab extends PluginSettingTab {
 			});
 
 		new Setting(containerEl)
-			.setName("Rotation Direction")
+			.setName("Rotation direction")
 			.setDesc("When rotating, which direction to turn.")
 			.addDropdown((dd) => {
 				dd.addOption("clockwise", "Clockwise");
-				dd.addOption("counter-clockwise", "Counter-Clockwise");
+				dd.addOption("counter-clockwise", "Counter-clockwise");
 				dd.setValue(this.plugin.settings.image?.rotationDirection || "clockwise");
 				dd.onChange(async (val) => {
 					if (!this.plugin.settings.image) {
@@ -601,9 +604,9 @@ export class NoteMakerAISettingTab extends PluginSettingTab {
 		containerEl.createEl("hr");
 
 		// LOGGING
-		containerEl.createEl("h3", { text: "Advanced" });
+		new Setting(containerEl).setName("Advanced").setHeading();
 		new Setting(containerEl)
-			.setName("Log Level")
+			.setName("Log level")
 			.setDesc("Control the verbosity of the developer console logs.")
 			.addDropdown((dd) => {
 				dd.addOption("debug", "Debug");
