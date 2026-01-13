@@ -11,40 +11,65 @@ To use your custom subject, go to **Settings > NoteMaker AI** and set the **Subj
 The file uses a YAML block (like frontmatter) to define the configuration.
 
 ```yaml
-subject_name: "Wines"
-id: "custom_wines_v1" # Optional: Stable ID regardless of name changes
-icon: "wine"
+subject_name: "Album"
+id: "custom_album_v1" # Optional: Stable ID regardless of name changes
+icon: "disc"
 
 # Enable photo verification (optional)
 validate_subject: true
 validation_threshold: 0.8
 
 naming:
-    note: "{{producer}} - {{name}} ({{year}})"
-    photo: "{{producer}}_{{name}}_{{year}}"
+    note: "{{artist}} - {{album}} ({{year}})"
+    photo: "{{artist}}_{{album}}_{{year}}"
 
 properties:
-    - key: "name"
-    instruction: "Name of the wine"
-    - key: "producer"
-    instruction: "Winery or producer name"
+    - key: "album"
+      instruction: "Album title"
+    - key: "artist"
+      instruction: "Artist or Band name"
     - key: "year"
-    instruction: "Vintage year"
+      instruction: "Release year"
+    - key: "genre"
+      instruction: "Musical Genre(s)"
+      type: sequence # <--- This enforces a list format in the output
     - key: "is_reviewed"
-    default: false
+      default: false
     # If 'default' is present and 'instruction' is omitted, the AI will NOT be asked to extract this field.
     # The value will be automatically inserted into the note properties.
 
 sections:
-    - heading: "Tasting Notes"
-    instruction: "Describe flavor profile, body, and acidity."
+    - heading: "Track List"
+      instruction: "Ordered list of tracks on the album."
 
-lead_prompt: "You are a sommelier. Analyze the wine label..."
+lead_prompt: "You are a music historian. Analyze the album cover..."
 trailing_prompt: "Return valid JSON..."
 ```
 
 ---
 
+## Stable IDs & Renaming Subjects
+ 
+If you decide to rename a subject (e.g., changing `subject_name` from "Wine" to "Vino"), NoteMaker AI might get confused when "Redoing" old notes, because it checks the `note_created_by` field in the frontmatter.
+ 
+To fix this, you can assign a stable `id`.
+ 
+1.  **Original Config:**
+    ```yaml
+    subject_name: "Wine"
+    # implicit id: "wine"
+    ```
+ 
+2.  **New Config (Renamed):**
+    ```yaml
+    subject_name: "Vino"
+    id: "wine" # <--- Keeps the internal ID matching the old notes!
+    ```
+ 
+By explicitly setting `id: "wine"`, the system knows that "Vino" is just a new label for the same subject, allowing you to use Redo on your old "Wine" notes without safety warnings.
+ 
+---
+ 
 ## Field Reference
 
 | Field | Type | Description |
@@ -60,6 +85,7 @@ trailing_prompt: "Return valid JSON..."
 | `properties` | Array | **Required.** List of Frontmatter properties to extract. |
 | `properties[].key` | String | **Required.** The key name of the property. |
 | `properties[].instruction` | String | **Optional.** Instruction for the AI. If omitted, `default` must be set. |
+| `properties[].type` | String | **Optional.** Set to `sequence` (or `list`, `array`) to enforce a list format. |
 | `properties[].default` | Any | **Optional.** Default value to use if AI extraction fails or if instruction is omitted. |
 | `sections` | Array | **Required.** List of Markdown sections to generate content for. |
 | `lead_prompt` | String | **Required.** The opening instruction to the AI (role and goal). |
