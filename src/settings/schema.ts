@@ -3,6 +3,7 @@ import { SUBJECT_DIR, SUBJECT_PHOTOS_DIR } from "../utils/constants";
 export const CURRENT_SETTINGS_VERSION = 3;
 
 export type LlmVendor = 'openai' | 'gemini' | 'openrouter' | 'anthropic';
+export type LogLevel = 'debug' | 'info' | 'warn' | 'error' | 'none';
 
 export interface LlmConfigEntry {
   /** Unique label (max 12 chars, alphanumeric/underscores) that users select elsewhere. */
@@ -51,6 +52,7 @@ export interface NoteMakerAISettings {
   /** Global "Keep original after resize" setting. */
 
   image?: ImageSettings;
+  logLevel?: LogLevel;
 }
 
 export const DEFAULT_LLM_LABEL = 'default';
@@ -76,4 +78,5 @@ export const DEFAULT_SETTINGS: NoteMakerAISettings = {
     orientation: 'maintain',
     rotationDirection: 'clockwise',
   },
+  logLevel: 'error',
 };

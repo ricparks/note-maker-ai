@@ -1,3 +1,4 @@
+import { Logger } from '../../utils/logger';
 import { App, TFile, parseYaml, Notice } from 'obsidian';
 import { FileDefinedSubject } from './FileDefinedSubject';
 import { SubjectDefinition, SubjectInfoBase } from './types';
@@ -15,7 +16,7 @@ export async function parseSubjectDefinitionFile(app: App, filePath: string, sup
   const file = app.vault.getAbstractFileByPath(filePath);
   
   if (!file || !(file instanceof TFile)) {
-    if (!suppressLog) console.warn(`[NoteMakerAI] No subject definition file found at ${filePath}.`);
+    if (!suppressLog) Logger.warn(`[NoteMakerAI] No subject definition file found at ${filePath}.`);
     return null;
   }
 
@@ -25,7 +26,7 @@ export async function parseSubjectDefinitionFile(app: App, filePath: string, sup
     
     if (!yamlContent) {
       new Notice(`NoteMakerAI: Subject definition file "${filePath}" is empty or invalid.`);
-      console.warn(`[NoteMakerAI] ${filePath} is empty or invalid.`);
+      Logger.warn(`[NoteMakerAI] ${filePath} is empty or invalid.`);
       return null;
     }
 
@@ -35,7 +36,7 @@ export async function parseSubjectDefinitionFile(app: App, filePath: string, sup
     const validationErrors = validateSubjectDefinition(parsed);
     if (validationErrors.length > 0) {
       const msg = `Invalid subject definition in ${filePath}:\n- ${validationErrors.join('\n- ')}`;
-      console.error(`[NoteMakerAI] ${msg}`);
+      Logger.error(`[NoteMakerAI] ${msg}`);
       new Notice(`NoteMakerAI Error: ${msg}`, 5000); // 5s duration
       return null;
     }
@@ -43,7 +44,7 @@ export async function parseSubjectDefinitionFile(app: App, filePath: string, sup
     return new FileDefinedSubject(parsed);
 
   } catch (e) {
-    console.error(`[NoteMakerAI] Failed to load subject definition from ${filePath}`, e);
+    Logger.error(`[NoteMakerAI] Failed to load subject definition from ${filePath}`, e);
     // Be explicit if it's our own validation error vs a parsing error
     new Notice(`Failed to load subject definition: ${e}`);
     return null;

@@ -1,7 +1,8 @@
 // Settings Tab UI (moved under ui/settings for cohesion)
 import { App, PluginSettingTab, Setting, Notice } from "obsidian";
 import type NoteMakerAI from "../../main";
-import type { LlmVendor } from "../../settings/schema";
+import { Logger } from "../../utils/logger";
+import type { LlmVendor, LogLevel } from "../../settings/schema";
 import { SUBJECT_DIR, SUBJECT_PHOTOS_DIR } from "../../utils/constants";
 import { FolderSuggest } from "../components/FolderSuggest";
 
@@ -598,6 +599,25 @@ export class NoteMakerAISettingTab extends PluginSettingTab {
 
 		// Separator after Subject Folders section
 		containerEl.createEl("hr");
+
+		// LOGGING
+		containerEl.createEl("h3", { text: "Advanced" });
+		new Setting(containerEl)
+			.setName("Log Level")
+			.setDesc("Control the verbosity of the developer console logs.")
+			.addDropdown((dd) => {
+				dd.addOption("debug", "Debug");
+				dd.addOption("info", "Info");
+				dd.addOption("warn", "Warning");
+				dd.addOption("error", "Error");
+				dd.addOption("none", "None");
+				dd.setValue(this.plugin.settings.logLevel || 'error');
+				dd.onChange(async (val) => {
+					this.plugin.settings.logLevel = val as LogLevel;
+					Logger.setLevel(this.plugin.settings.logLevel);
+					await this.plugin.saveSettings();
+				});
+			});
 
 	}
 

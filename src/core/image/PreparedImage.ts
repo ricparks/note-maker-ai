@@ -1,4 +1,5 @@
 import { App, TFile } from 'obsidian';
+import { Logger as GlobalLogger } from '../../utils/logger';
 import type { ReducedImageOrientation, RotationDirection } from '../../settings/schema';
 
 export type LogLevel = 'info' | 'error';
@@ -132,7 +133,7 @@ export class PreparedImage {
       return true;
     } catch (e) {
       this.logError('Failed to resize image.');
-      console.error(e);
+      GlobalLogger.error("Error resizing image: " + String(e));
       return false;
     }
   }
@@ -239,7 +240,7 @@ export class PreparedImage {
         this.logInfo('Deleted original image.');
       } catch (e) {
         this.logError('Failed to delete original image.');
-        console.error(e);
+        GlobalLogger.error("Error deleting original image: " + String(e));
       }
     } else if (!this.keepOriginal && !this.needsResize) {
        // If we didn't resize, we likely moved the file, so we don't delete it (it's the same file).
@@ -350,7 +351,7 @@ export class PreparedImage {
       return exif;
     } catch (e) {
       this.logError('Failed to parse EXIF metadata.');
-      console.error(e);
+      GlobalLogger.error("Error parsing EXIF: " + String(e));
       this.exifData = null;
       return null;
     }

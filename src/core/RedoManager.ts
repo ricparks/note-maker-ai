@@ -1,3 +1,4 @@
+import { Logger } from "../utils/logger";
 import { TFile, App, Notice } from "obsidian";
 import { createProgressModal } from "../ui/progress/ProgressModal";
 import type NoteMakerAI from "../main";
@@ -113,9 +114,9 @@ export class RedoManager {
 				: subject.definition!.prompt;
 		
 		// DEBUG logging for prompt generation
-		console.log(`[NoteMakerAI] Processing active markdown: ${file.name}`);
+		Logger.info(`[NoteMakerAI] Processing active markdown: ${file.name}`);
 		const additions = noteData.sections['Prompt Additions'] || noteData.sections['PA'] || noteData.sections['pa'];
-		console.log(`[NoteMakerAI] Extracted PA for ${file.name}:`, additions ? additions.slice(0, 50) + "..." : "None");
+		Logger.debug(`[NoteMakerAI] Extracted PA for ${file.name}:`, additions ? additions.slice(0, 50) + "..." : "None");
 		
 		const photoFile = this.resolveRedoPhoto(noteData, file, content);
 		if (!photoFile) {
@@ -130,7 +131,7 @@ export class RedoManager {
 		try {
 			photoBase64 = await this.readFileAsBase64(photoFile);
 		} catch (error) {
-			console.error("Failed to read photo for redo", error);
+			Logger.error("Failed to read photo for redo", error);
 			progressModal.error(
 				"Redo failed: could not read the linked photo for this note."
 			);
@@ -174,7 +175,7 @@ export class RedoManager {
 			progressModal.done(false);
 			return;
 		}
-		console.log("[NoteMakerAI] Redo raw subject:", resultCtx.data);
+		Logger.debug("[NoteMakerAI] Redo raw subject:", resultCtx.data);
 		this.redoContext.rawSubject = resultCtx.data;
 		progressModal.info("Fetched redo subject data");
 
@@ -203,7 +204,7 @@ export class RedoManager {
 		try {
 			return subject.definition!.parse(raw);
 		} catch (error) {
-			console.error("Redo failed to parse subject data", error, raw);
+			Logger.error("Redo failed to parse subject data", error, raw);
 			progressModal.error("Redo failed: unable to parse subject data.");
 			progressModal.done(false);
 			return null;
@@ -276,7 +277,7 @@ export class RedoManager {
 			progressModal.done(true);
 			this.redoContext = null;
 		} catch (error) {
-			console.error("Redo failed while writing note", error);
+			Logger.error("Redo failed while writing note", error);
 			progressModal.error("Redo failed: could not write the updated note.");
 			progressModal.done(false);
 		}

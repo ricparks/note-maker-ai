@@ -7,6 +7,7 @@ import { SubjectRegistry } from './core/subject';
 import { NoteMakerCore } from './core/NoteMakerCore';
 import * as SubjectLoader from './core/subject/SubjectLoader';
 import { registerCommands, registerSubjectCommand } from './commands';
+import { Logger } from './utils/logger';
 
 // Main plugin class kept minimal; business logic lives in NoteMakerCore (core/NoteMakerCore.ts)
 export default class NoteMakerAI extends Plugin {
@@ -21,10 +22,13 @@ export default class NoteMakerAI extends Plugin {
 
     // This function runs when your plugin is loaded
     async onload() {
-        console.log("[NoteMakerAI] Loading plugin...");
         this.settingsManager = new SettingsManager(this);
         await this.settingsManager.load();
         this.settings = this.settingsManager.data;
+        
+        // Initialize Logger
+        Logger.setLevel(this.settings.logLevel || 'error');
+        Logger.info("[NoteMakerAI] Loading plugin...");
         
         // Initialize Registry and Core
         this.subjectRegistry = new SubjectRegistry();
@@ -34,7 +38,7 @@ export default class NoteMakerAI extends Plugin {
 
         // Use onLayoutReady to ensure mobile UI is ready for ribbons
         this.app.workspace.onLayoutReady(async () => {
-             console.log("[NoteMakerAI] Layout ready, loading subjects...");
+             Logger.info("[NoteMakerAI] Layout ready, loading subjects...");
              
              // On mobile, the vault may not be fully indexed when layout is ready.
              // Wait for the metadata cache to finish initial indexing.
@@ -52,7 +56,7 @@ export default class NoteMakerAI extends Plugin {
         this.registerEvent(this.app.vault.on('modify', async (file) => {
             const matched = this.settings.subjects.find(s => s.subjectDefinitionPath === file.path);
             if (matched) {
-               console.log(`[NoteMakerAI] Definition modified: ${file.path}, reloading subject.`);
+               Logger.info(`[NoteMakerAI] Definition modified: ${file.path}, reloading subject.`);
                await this.reloadSubject(matched);
                this.renderRibbons();
             }
@@ -62,7 +66,7 @@ export default class NoteMakerAI extends Plugin {
         this.registerEvent(this.app.vault.on('create', async (file) => {
             const matched = this.settings.subjects.find(s => s.subjectDefinitionPath === file.path);
             if (matched) {
-               console.log(`[NoteMakerAI] Definition created: ${file.path}, loading subject.`);
+               Logger.info(`[NoteMakerAI] Definition created: ${file.path}, loading subject.`);
                await this.reloadSubject(matched);
                this.renderRibbons();
             }
@@ -83,14 +87,14 @@ export default class NoteMakerAI extends Plugin {
         return new Promise((resolve) => {
             // Check if metadataCache is already resolved
             if ((this.app.metadataCache as any).initialized) {
-                console.log("[NoteMakerAI] Metadata cache already initialized.");
+                Logger.info("[NoteMakerAI] Metadata cache already initialized.");
                 resolve();
                 return;
             }
             
             // Otherwise, wait for the 'resolved' event
             const handler = () => {
-                console.log("[NoteMakerAI] Metadata cache resolved event fired.");
+                Logger.info("[NoteMakerAI] Metadata cache resolved event fired.");
                 resolve();
             };
             
@@ -98,7 +102,7 @@ export default class NoteMakerAI extends Plugin {
             
             // Also add a timeout fallback in case 'resolved' already fired
             setTimeout(() => {
-                console.log("[NoteMakerAI] Vault ready timeout fallback.");
+                Logger.info("[NoteMakerAI] Vault ready timeout fallback.");
                 resolve();
             }, 2000);
         });
@@ -111,7 +115,7 @@ export default class NoteMakerAI extends Plugin {
         const subjects = this.settings.subjects || [];
         
         if (subjects.length === 0) {
-            console.log("[NoteMakerAI] No subjects configured.");
+            Logger.info("[NoteMakerAI] No subjects configured.");
             new (require('obsidian').Notice)("NoteMaker AI: No Subject Definition File configured. Please set one in Settings.");
             return;
         }
@@ -142,7 +146,7 @@ export default class NoteMakerAI extends Plugin {
         // Only warn if we failed but only if not just partially typed (heuristic?)
         // Actually, user wants deferred validation. So we log info instead of warn to reduce console noise during typing.
         if (!definition) {
-            console.log(`[NoteMakerAI] Definition not loaded for ${config.name} at ${config.subjectDefinitionPath} (deferred).`);
+            Logger.info(`[NoteMakerAI] Definition not loaded for ${config.name} at ${config.subjectDefinitionPath} (deferred).`);
         }
         
         this.registerSubjectCommand(active);
@@ -160,7 +164,7 @@ export default class NoteMakerAI extends Plugin {
         this.ribbonEls = [];
 
         const subjects = this.subjectRegistry.subjects;
-        console.log(`[NoteMakerAI] Rendering ribbons for ${subjects.length} subjects.`);
+        Logger.info(`[NoteMakerAI] Rendering ribbons for ${subjects.length} subjects.`);
         
         for (const subject of subjects) {
             // Lazy load check: if definition missing, do NOT render a ribbon at all.

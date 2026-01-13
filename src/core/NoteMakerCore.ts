@@ -62,6 +62,7 @@ import type { AiResult } from "./ai/types";
 import { confirm } from "../ui/confirm/ConfirmModal";
 import type { LlmConfigEntry } from "../settings/schema";
 import { RedoManager } from "./RedoManager";
+import { Logger } from "../utils/logger";
 
 type ExifData = import("./image/PreparedImage").ExifData;
 
@@ -190,7 +191,7 @@ export class NoteMakerCore {
 				return selectedFiles;
 			}
 		} catch (e) {
-			console.warn("[NoteMakerAI] Selection detection failed (graceful fallback):", e);
+			Logger.warn("[NoteMakerAI] Selection detection failed (graceful fallback):", e);
 		}
 		return [];
 	}
@@ -284,7 +285,7 @@ export class NoteMakerCore {
 			.catch(() => null);
 		const base64ForModel = aiBase64 || noteImageBase64; // fallback to note image if shrinking fails
 
-		console.log("Prepared image ready for AI call.");
+		Logger.info("Prepared image ready for AI call.");
 
 		progressModal.info("Calling AI vendor...");
 		const resultCtx = await this.fetchSubjectJson(
@@ -305,12 +306,12 @@ export class NoteMakerCore {
 		try {
 			parsed = subject.definition!.parse(resultCtx.data);
 		} catch (e) {
-			console.error("Failed to parse subject data", e, resultCtx.data);
+			Logger.error("Failed to parse subject data", e, resultCtx.data);
 		}
 
 		if (parsed) {
 			progressModal.info(SUCCESS_FETCHED_SUBJECT);
-			console.log(parsed);
+			Logger.debug(parsed);
 
 			// Surface non-blocking warnings for parsed data
 			if (typeof (subject.definition as any).validateParsedData === "function") {
@@ -362,7 +363,7 @@ export class NoteMakerCore {
 					}
 				}
 			} catch (e) {
-				console.warn("Guardrail check failed", e);
+				Logger.warn("Guardrail check failed", e);
 			}
 
 			// Post-parse: rename photo canonically if subject provides a naming hook
@@ -375,7 +376,7 @@ export class NoteMakerCore {
 					}) as string;
 					finalPhotoFile = await preparedImage.renameTo(base);
 				} catch (e) {
-					console.warn("Photo rename skipped/failed:", e);
+					Logger.warn("Photo rename skipped/failed:", e);
 				}
 			}
 
@@ -531,7 +532,7 @@ export class NoteMakerCore {
 
 
 
-		console.log(
+		Logger.info(
 			`[NoteMakerAI] Fetching subject JSON (promptOverride=${!!promptOverride}). Prompt length: ${prompt.length}`
 		);
 
@@ -554,7 +555,7 @@ export class NoteMakerCore {
 			return null;
 		}
 
-		console.log(`[NoteMakerAI] Using LLM: ${vendor} / ${model} (${llmLabel})`);
+		Logger.info(`[NoteMakerAI] Using LLM: ${vendor} / ${model} (${llmLabel})`);
 
 
 
@@ -616,7 +617,7 @@ export class NoteMakerCore {
 		if (!result.ok) {
 			// Centralized user feedback 
 			progressModal.error(result.error);
-			console.error("AI call failed", result);
+			Logger.error("AI call failed", result);
 			return null;
 		}
 
@@ -630,7 +631,7 @@ export class NoteMakerCore {
 					.trim();
 				return { data: JSON.parse(cleaned), model: result.model || model };
 			} catch (e) {
-				console.error("JSON Parse Error", e, result.data);
+				Logger.error("JSON Parse Error", e, result.data);
 				progressModal.error("Failed to parse AI response as JSON.");
 				return null;
 			}
@@ -673,7 +674,7 @@ export class NoteMakerCore {
 				// Only ignore "folder already exists" errors; re-check to be safe
 				const existsNow = this.plugin.app.vault.getAbstractFileByPath(dir);
 				if (!existsNow) {
-					console.error(`[NoteMakerAI] Failed to create folder "${dir}":`, e);
+					Logger.error(`[NoteMakerAI] Failed to create folder "${dir}":`, e);
 				}
 			}
 		}
@@ -713,7 +714,7 @@ export class NoteMakerCore {
 			await leaf.openFile(newFile);
 			return true;
 		} catch (error) {
-			console.error("Error creating new note:", error);
+			Logger.error("Error creating new note:", error);
 			progressModal.error(COULD_NOT_CREATE_NOTE);
 			return false;
 		}
