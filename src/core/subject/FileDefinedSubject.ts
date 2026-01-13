@@ -39,12 +39,24 @@ export class FileDefinedSubject implements SubjectDefinition<SubjectInfoBase> {
     // prompt properties: exclude ones that have a default AND no instruction
     const promptProperties = properties.filter(p => !p.default || p.instruction);
 
-    const propsList = promptProperties.map(p => `- ${p.key}: ${p.instruction || "Extract value"}`).join('\n');
+    const propsList = promptProperties.map(p => {
+      let instr = p.instruction || "Extract value";
+      if (p.type === 'sequence' || p.type === 'list' || p.type === 'array') {
+        instr += " (as a list)";
+      }
+      return `- ${p.key}: ${instr}`;
+    }).join('\n');
     const sectionsList = sections.map(s => `- ${s.heading}: ${s.instruction}`).join('\n');
     
     // We also construct a robust JSON example dynamically to help the LLM structure correctly
     const exampleObj: Record<string, any> = {};
-    promptProperties.forEach(p => exampleObj[p.key] = "...");
+    promptProperties.forEach(p => {
+      if (p.type === 'sequence' || p.type === 'list' || p.type === 'array') {
+        exampleObj[p.key] = ["...", "..."];
+      } else {
+        exampleObj[p.key] = "...";
+      }
+    });
     sections.forEach(s => exampleObj[s.heading] = "...");
     
     // Combine standard meta fields that are always requested in trailing_prompt

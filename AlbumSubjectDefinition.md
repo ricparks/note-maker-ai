@@ -19,6 +19,7 @@ properties:
       instruction: "Record Label"
     - key: "genre"
       instruction: "Musical Genre(s)"
+      type: sequence
     - key: "is_digital"
       instruction: "Leave blank"
     - key: "is_reviewed"

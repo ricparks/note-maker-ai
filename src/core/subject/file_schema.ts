@@ -2,6 +2,7 @@
 export interface FileDefinedProperty {
   key: string;
   instruction?: string;
+  type?: string;
   default?: any;
 }
 

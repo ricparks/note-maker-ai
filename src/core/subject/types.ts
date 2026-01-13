@@ -13,7 +13,7 @@ export interface SubjectInfoBase {
   // Original JSON or object returned by the AI (for debugging or advanced templates)
   raw: any;
   // Arbitrary structured fields (normalized key/value pairs)
-  fields: Record<string, string | number | boolean | null>;
+  fields: Record<string, string | number | boolean | null | any[]>;
 }
 
 export interface SubjectNoteSections {
