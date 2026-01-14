@@ -1,5 +1,5 @@
 import { Logger } from "../utils/logger";
-import { TFile, App, Notice } from "obsidian";
+import { TFile, App, Notice, MarkdownView } from "obsidian";
 import { createProgressModal } from "../ui/progress/ProgressModal";
 import type NoteMakerAI from "../main";
 import type { NoteMakerCore } from "./NoteMakerCore";
@@ -272,7 +272,16 @@ export class RedoManager {
 		updated = this.normalizeSectionSpacing(updated);
 
 		try {
-			await this.plugin.app.vault.modify(file, updated);
+			// Prefer Editor API if this file is currently open in the active view
+			// This preserves cursor position, scroll, and fold state.
+			const activeView = this.plugin.app.workspace.getActiveViewOfType(MarkdownView);
+			if (activeView && activeView.file && activeView.file.path === file.path) {
+				activeView.editor.setValue(updated);
+			} else {
+				// Fallback if not currently the active editor (unlikely for "Redo active note", but safe)
+				await this.plugin.app.vault.modify(file, updated);
+			}
+
 			progressModal.info("Updated note with regenerated content");
 			progressModal.done(true);
 			this.redoContext = null;
