@@ -134,13 +134,15 @@ export class NoteMakerAISettingTab extends PluginSettingTab {
 					.addText(text => {
 						text.setPlaceholder(`e.g. ${SUBJECT_DIR}`)
 							.setValue(subject.notesDir)
-							.onChange(async (val) => {
+						.onChange(async (val) => {
 								subject.notesDir = val;
 								await this.plugin.saveSettings();
+								await (this.plugin as any).reloadSubject(subject);
 							});
 						new FolderSuggest(this.app, text.inputEl, async (picked) => {
 							subject.notesDir = picked;
 							await this.plugin.saveSettings();
+							await (this.plugin as any).reloadSubject(subject);
 						});
 					});
 
@@ -151,13 +153,15 @@ export class NoteMakerAISettingTab extends PluginSettingTab {
 					.addText(text => {
 						text.setPlaceholder(`e.g. ${SUBJECT_PHOTOS_DIR}`)
 							.setValue(subject.photosDir)
-							.onChange(async (val) => {
+						.onChange(async (val) => {
 								subject.photosDir = val;
 								await this.plugin.saveSettings();
+								await (this.plugin as any).reloadSubject(subject);
 							});
 						new FolderSuggest(this.app, text.inputEl, async (picked) => {
 							subject.photosDir = picked;
 							await this.plugin.saveSettings();
+							await (this.plugin as any).reloadSubject(subject);
 						});
 					});
 

@@ -279,7 +279,8 @@ export class RedoManager {
 				activeView.editor.setValue(updated);
 			} else {
 				// Fallback if not currently the active editor (unlikely for "Redo active note", but safe)
-				await this.plugin.app.vault.modify(file, updated);
+				// Use process for atomic background updates
+				await this.plugin.app.vault.process(file, () => updated);
 			}
 
 			progressModal.info("Updated note with regenerated content");
