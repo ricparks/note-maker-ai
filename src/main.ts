@@ -92,17 +92,27 @@ export default class NoteMakerAI extends Plugin {
                 return;
             }
             
+            let eventRef: any = null;
+            let timer: any = null;
+
+            const cleanup = () => {
+                if (eventRef) this.app.metadataCache.offref(eventRef);
+                if (timer) clearTimeout(timer);
+            };
+            
             // Otherwise, wait for the 'resolved' event
             const handler = () => {
                 Logger.info("[NoteMakerAI] Metadata cache resolved event fired.");
+                cleanup();
                 resolve();
             };
             
-            this.app.metadataCache.on('resolved', handler);
+            eventRef = this.app.metadataCache.on('resolved', handler);
             
             // Also add a timeout fallback in case 'resolved' already fired
-            setTimeout(() => {
+            timer = setTimeout(() => {
                 Logger.info("[NoteMakerAI] Vault ready timeout fallback.");
+                cleanup();
                 resolve();
             }, 2000);
         });
