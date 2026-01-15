@@ -51,7 +51,6 @@ export class ProgressModal extends Modal {
 
     if (this.completed) {
       const footer = el.createEl('div', { cls: 'notemaker-progress-footer' });
-      footer.style.marginTop = '1em';
       const btn = footer.createEl('button', { text: 'OK' });
       btn.addClass('mod-cta');
       btn.onclick = () => this.close();

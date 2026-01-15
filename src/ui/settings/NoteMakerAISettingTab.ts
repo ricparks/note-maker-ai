@@ -66,18 +66,11 @@ export class NoteMakerAISettingTab extends PluginSettingTab {
 			
 			subjects.forEach((subject, idx) => {
 				const card = subjectsWrap.createEl("div", { cls: "notemaker-subject-card" });
-				card.style.border = "1px solid var(--background-modifier-border)";
-				card.style.borderRadius = "8px";
-				card.style.padding = "12px";
-				card.style.marginBottom = "12px";
-				card.style.backgroundColor = "var(--background-secondary)";
+
 
 				// Header: Name + Loading styling
-				const header = card.createEl("div");
-				header.style.display = "flex";
-				header.style.justifyContent = "space-between";
-				header.style.marginBottom = "10px";
-				header.createEl("h4", { text: subject.name || "Untitled Subject", cls: "setting-item-name" }).style.margin = "0";
+				const header = card.createEl("div", { cls: "notemaker-subject-header" });
+				header.createEl("h4", { text: subject.name || "Untitled Subject", cls: "setting-item-name notemaker-setting-item-name" });
 
 				// Delete Button
 				const delBtn = header.createEl("button", { text: "Delete" });
@@ -186,9 +179,6 @@ export class NoteMakerAISettingTab extends PluginSettingTab {
 		renderSubjects();
 
 		const addSubjectWrap = containerEl.createEl("div", { cls: "notemaker-add-subject" });
-		addSubjectWrap.style.display = "flex";
-		addSubjectWrap.style.justifyContent = "center";
-		addSubjectWrap.style.marginBottom = "24px";
 
 		const addBtn = addSubjectWrap.createEl("button", { text: "+ Add new subject" });
 		addBtn.addClass("mod-cta");
@@ -277,16 +267,11 @@ export class NoteMakerAISettingTab extends PluginSettingTab {
 			}
 			llms.forEach((entry, idx) => {
 				const row = llmWrap.createEl("div");
-				row.style.display = "flex";
-				row.style.alignItems = "center";
-				row.style.gap = "10px";
-				row.style.marginBottom = "8px";
 
-				const labelInput = row.createEl("input", { type: "text" });
+				const labelInput = row.createEl("input", { type: "text", cls: "notemaker-input-label" });
 				labelInput.placeholder = "Label (max 12)";
 				labelInput.value = entry.label;
 				labelInput.maxLength = 12;
-				labelInput.style.minWidth = "8ch";
 				labelInput.onchange = async () => {
 					const val = (labelInput.value || "").trim();
 					const valid = /^[A-Za-z0-9_]{1,12}$/.test(val);
@@ -345,22 +330,16 @@ export class NoteMakerAISettingTab extends PluginSettingTab {
 					await refreshLlmDependentSelects();
 				};
 
-				const modelWrap = row.createEl("div");
-				modelWrap.style.display = "flex";
-				modelWrap.style.alignItems = "center";
-				modelWrap.style.gap = "6px";
-				modelWrap.style.flex = "1";
+				const modelWrap = row.createEl("div", { cls: "notemaker-model-wrap" });
 
-				const modelSelect = modelWrap.createEl("select");
-				modelSelect.style.minWidth = "16ch";
+				const modelSelect = modelWrap.createEl("select", { cls: "notemaker-input-model-select" });
 
 				const customModelInput = modelWrap.createEl("input", {
 					type: "text",
+                    cls: "notemaker-input-custom-model"
 				});
 				customModelInput.placeholder = "Custom model";
 				customModelInput.style.display = "none";
-				customModelInput.style.minWidth = "12ch";
-				customModelInput.style.flex = "1";
 				customModelInput.maxLength = 80;
 
 				const syncModelControls = () => {
@@ -442,10 +421,9 @@ export class NoteMakerAISettingTab extends PluginSettingTab {
 					await this.plugin.saveSettings();
 				};
 
-				const apiKeyInput = row.createEl("input", { type: "password" });
+				const apiKeyInput = row.createEl("input", { type: "password", cls: "notemaker-input-api-key" });
 				apiKeyInput.placeholder = "API key";
 				apiKeyInput.value = entry.apiKey || "";
-				apiKeyInput.style.width = "28ch";
 				apiKeyInput.onchange = async () => {
 					entry.apiKey = apiKeyInput.value.trim();
 					await this.plugin.saveSettings();
@@ -460,10 +438,7 @@ export class NoteMakerAISettingTab extends PluginSettingTab {
 					// No extra fields to toggle for now
 				};
 
-				const delBtn = row.createEl("button", { text: "×" });
-				delBtn.addClass("notemaker-btn-ghost-danger");
-				delBtn.addClass("notemaker-icon-btn");
-				delBtn.style.marginLeft = "auto";
+				const delBtn = row.createEl("button", { text: "×", cls: "notemaker-btn-ghost-danger notemaker-icon-btn notemaker-llm-remove-btn" });
 				delBtn.setAttr("aria-label", "Remove LLM");
 				delBtn.title = "Remove LLM";
 				delBtn.disabled = llms.length <= 1;
@@ -487,11 +462,7 @@ export class NoteMakerAISettingTab extends PluginSettingTab {
 
 		renderLlmRows();
 
-		const addLlmWrap = containerEl.createEl("div");
-		addLlmWrap.style.display = "flex";
-		addLlmWrap.style.justifyContent = "flex-end";
-		addLlmWrap.style.marginTop = "8px";
-		addLlmWrap.style.marginBottom = "18px";
+		const addLlmWrap = containerEl.createEl("div", { cls: "notemaker-add-llm-wrap" });
 		const addLlmBtn = addLlmWrap.createEl("button", {
 			text: "Add LLM",
 		});
@@ -522,7 +493,7 @@ export class NoteMakerAISettingTab extends PluginSettingTab {
 			const selectEl = dd.selectEl;
 			selectEl.dataset.role = "llm-default-select";
 			defaultLlmSelectEl = selectEl;
-			selectEl.style.minWidth = "12ch";
+            selectEl.addClass("notemaker-default-llm-select");
 			dd.onChange(async (value) => {
 				if (this.plugin.settings.defaultLlmLabel === value) return;
 				this.plugin.settings.defaultLlmLabel = value || undefined;
