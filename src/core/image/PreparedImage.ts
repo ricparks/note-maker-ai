@@ -88,7 +88,13 @@ export class PreparedImage {
       return false;
     }
 
-    const { w, h } = await this.measure(this.originalBuf).catch(() => ({ w: 0, h: 0 }));
+    let dims = { w: 0, h: 0 };
+    try {
+      dims = await this.measure(this.originalBuf);
+    } catch {
+      dims = { w: 0, h: 0 };
+    }
+    const { w, h } = dims;
     if (!w || !h) {
       this.logError('Could not read image dimensions.');
       return false;

@@ -276,13 +276,21 @@ export class NoteMakerCore {
 		const noteImageBase64 = preparedImage.getNoteBase64();
 		const processedFile = await preparedImage.writeFile();
 		// Parse EXIF once and pass to subjects (even if they ignore it)
-		const exifData = await preparedImage.getExifData().catch(() => null);
+        let exifData: ExifData | null = null;
+        try {
+            exifData = await preparedImage.getExifData();
+        } catch {
+            exifData = null;
+        }
 
 		// Always create / use a smaller AI-specific version to reduce token/cost.
 		progressModal.info("Generating reduced-size image for AI...");
-		const aiBase64 = await preparedImage
-			.getAiImageBase64()
-			.catch(() => null);
+		let aiBase64: string | null = null;
+		try {
+			aiBase64 = await preparedImage.getAiImageBase64();
+		} catch {
+			aiBase64 = null;
+		}
 		const base64ForModel = aiBase64 || noteImageBase64; // fallback to note image if shrinking fails
 
 		Logger.info("Prepared image ready for AI call.");
