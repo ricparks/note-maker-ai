@@ -1,5 +1,5 @@
 import { Logger } from "../utils/logger";
-import { TFile, App, Notice, MarkdownView } from "obsidian";
+import { TFile, App, Notice, MarkdownView, normalizePath } from "obsidian";
 import { createProgressModal } from "../ui/progress/ProgressModal";
 import type NoteMakerAI from "../main";
 import type { NoteMakerCore } from "./NoteMakerCore";
@@ -236,7 +236,8 @@ export class RedoManager {
 			.replace(/^!/, "");
 		const coverFileName = photoFile.name;
 
-		const baseContent = subject.definition!.buildNote(parsed, {
+		// Get components separately: pure markdown body and frontmatter object
+		const { frontmatter, body } = subject.definition!.getNoteParts(parsed, {
 			photoLink,
 			coverFileName,
 			exifData,
@@ -246,18 +247,19 @@ export class RedoManager {
 		const myNotesKey = this.findSectionKey(sections, "My Notes");
 		const promptKey = this.findSectionKey(sections, "Prompt Additions");
 
-		let updated = baseContent;
+		// We merge SECTIONS into the BODY logic
+		let updatedBody = body;
 		if (myNotesKey) {
-			updated = this.replaceSectionVariants(updated, [myNotesKey, "My Notes"], sections[myNotesKey] ?? "");
+			updatedBody = this.replaceSectionVariants(updatedBody, [myNotesKey, "My Notes"], sections[myNotesKey] ?? "");
 		}
 		if (promptKey) {
 			const promptBody = sections[promptKey] ?? "";
-			const exists = this.sectionExists(updated, promptKey) || this.sectionExists(updated, "Prompt Additions");
+			const exists = this.sectionExists(updatedBody, promptKey) || this.sectionExists(updatedBody, "Prompt Additions");
 			if (exists) {
-				updated = this.replaceSectionVariants(updated, [promptKey, "Prompt Additions"], promptBody);
+				updatedBody = this.replaceSectionVariants(updatedBody, [promptKey, "Prompt Additions"], promptBody);
 			} else {
 				const afterCandidates = myNotesKey ? [myNotesKey, "My Notes"] : ["My Notes"];
-				updated = this.insertSectionAfter(updated, afterCandidates, promptKey, promptBody);
+				updatedBody = this.insertSectionAfter(updatedBody, afterCandidates, promptKey, promptBody);
 			}
 		}
 
@@ -265,23 +267,40 @@ export class RedoManager {
 		if (mediaKey) {
 			const mediaBody = sections[mediaKey] ?? "";
 			if (mediaBody.trim().length > 0) {
-				updated = `${updated.trimEnd()}\n\n#### Additional Media\n${mediaBody}`;
+				updatedBody = `${updatedBody.trimEnd()}\n\n#### Additional Media\n${mediaBody}`;
 			}
 		}
 
-		updated = this.normalizeSectionSpacing(updated);
+		updatedBody = this.normalizeSectionSpacing(updatedBody);
 
 		try {
-			// Prefer Editor API if this file is currently open in the active view
-			// This preserves cursor position, scroll, and fold state.
-			const activeView = this.plugin.app.workspace.getActiveViewOfType(MarkdownView);
-			if (activeView && activeView.file && activeView.file.path === file.path) {
-				activeView.editor.setValue(updated);
-			} else {
-				// Fallback if not currently the active editor (unlikely for "Redo active note", but safe)
-				// Use process for atomic background updates
-				await this.plugin.app.vault.process(file, () => updated);
+			// Step 1: Write the content body. 
+			// We must preserve the existing frontmatter block string to avoid losing user-defined properties
+			// before we get a chance to run processFrontMatter.
+			const cache = this.plugin.app.metadataCache.getFileCache(file);
+			let finalContent = updatedBody;
+			
+			if (cache?.frontmatterPosition) {
+				const currentContent = await this.plugin.app.vault.read(file);
+				const fmEnd = cache.frontmatterPosition.end.offset;
+				// Extract --- ... --- block
+				const existingFrontmatterBlock = currentContent.substring(0, fmEnd);
+				finalContent = `${existingFrontmatterBlock}\n${updatedBody}`;
 			}
+			
+			await this.plugin.app.vault.modify(file, finalContent);
+			
+			// Step 2: Update Frontmatter atomically.
+			// This preserves any user custom properties that we aren't explicitly overwriting,
+			// while updating the ones we care about.
+			await this.plugin.app.fileManager.processFrontMatter(file, (fm) => {
+				// Inject the new properties
+				for (const [key, value] of Object.entries(frontmatter)) {
+					fm[key] = value;
+				}
+				// Note: We do NOT delete keys that are missing in new 'frontmatter'.
+				// This preserves user-added keys.
+			});
 
 			progressModal.info("Updated note with regenerated content");
 			progressModal.done(true);
@@ -550,7 +569,7 @@ export class RedoManager {
 		const dir = file.parent ? file.parent.path : "";
 		const buildPath = (attempt: number) => {
 			const base = attempt === 0 ? desiredBaseName : `${desiredBaseName} ${attempt + 1}`;
-			return dir ? `${dir}/${base}.md` : `${base}.md`;
+			return normalizePath(dir ? `${dir}/${base}.md` : `${base}.md`);
 		};
 
 		let attempt = 0;

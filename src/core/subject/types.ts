@@ -84,6 +84,7 @@ export interface SubjectDefinition<T extends SubjectInfoBase = SubjectInfoBase> 
    * @param context - Optional photo/EXIF/LLM context for embedding images and metadata
    * @returns Complete markdown string including frontmatter and all sections
    */
+  getNoteParts(info: T, context: { photoLink?: string; coverFileName?: string; exifData?: import('../image/PreparedImage').ExifData; llmModel?: string }): { frontmatter: Record<string, any>; body: string };
   buildNote(info: T, context: { photoLink?: string; coverFileName?: string; exifData?: import('../image/PreparedImage').ExifData; llmModel?: string }): string;
   parse(aiJson: any): T;      // map AI JSON to typed structure with fallbacks
   // Optional per-subject note directory (relative inside vault). If omitted, fallback constant used.

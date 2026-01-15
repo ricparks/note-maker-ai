@@ -174,7 +174,7 @@ ${trailing_prompt}`;
     return result;
   }
 
-  buildNote(info: SubjectInfoBase, context: { coverFileName?: string; llmModel?: string }): string {
+  getNoteParts(info: SubjectInfoBase, context: { coverFileName?: string; llmModel?: string }): { frontmatter: Record<string, any>; body: string } {
     const { properties, sections } = this.definition;
     const fields = info.fields as Record<string, any>;
 
@@ -205,15 +205,8 @@ ${trailing_prompt}`;
       frontmatterObj['llm-model'] = context.llmModel;
     }
 
-    // Serialize using Obsidian API
-    const yamlString = stringifyYaml(frontmatterObj).trim();
-
-    // 2. Build Content
+    // 2. Build Content Body
     const contentLines: string[] = [];
-    
-    contentLines.push('---');
-    contentLines.push(yamlString);
-    contentLines.push('---');
 
     // Framework Section: My Notes (Must exist for Redo)
     contentLines.push(`#### My Notes`);
@@ -244,7 +237,16 @@ ${trailing_prompt}`;
       contentLines.push(`![[${context.coverFileName}]]`);
     }
 
-    return contentLines.join('\n');
+    return {
+      frontmatter: frontmatterObj,
+      body: contentLines.join('\n')
+    };
+  }
+
+  buildNote(info: SubjectInfoBase, context: { coverFileName?: string; llmModel?: string }): string {
+    const { frontmatter, body } = this.getNoteParts(info, context);
+    const yamlString = stringifyYaml(frontmatter).trim();
+    return `---\n${yamlString}\n---\n${body}`;
   }
 
   // --- Re-used Utilities ---

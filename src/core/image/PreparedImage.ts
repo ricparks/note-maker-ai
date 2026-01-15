@@ -1,4 +1,4 @@
-import { App, TFile } from 'obsidian';
+import { App, TFile, normalizePath } from 'obsidian';
 import { Logger as GlobalLogger } from '../../utils/logger';
 import type { ReducedImageOrientation, RotationDirection } from '../../settings/schema';
 
@@ -145,7 +145,7 @@ export class PreparedImage {
    * Optionally deletes the original depending on keepOriginal setting.
    */
   async writeFile(): Promise<TFile> {
-    const photosDir = this.photosDir || `${this.subjectDir}/${this.photosSubdir}`;
+    const photosDir = normalizePath(this.photosDir || `${this.subjectDir}/${this.photosSubdir}`);
     await this.ensureFolder(photosDir);
 
     const baseName = this.sourceFile.name.replace(/\.[^.]+$/, '');
@@ -167,7 +167,7 @@ export class PreparedImage {
         // Strategy: photo.ext, photo 2.ext, photo 3.ext
         const suffix = counter === 1 ? '' : ` ${counter}`;
         const candidateName = `${baseName}${suffix}.${this.sourceFile.extension}`;
-        const candidatePath = `${photosDir}/${candidateName}`;
+        const candidatePath = normalizePath(`${photosDir}/${candidateName}`);
         
         // Soft check via cache
         if (this.app.vault.getAbstractFileByPath(candidatePath)) {
@@ -203,7 +203,7 @@ export class PreparedImage {
         if (counter === 2) candidateName = `${baseName}-resized.jpg`;
         else if (counter > 2) candidateName = `${baseName}-resized-${counter - 1}.jpg`;
 
-        const finalPath = `${photosDir}/${candidateName}`;
+        const finalPath = normalizePath(`${photosDir}/${candidateName}`);
         
         // Soft check
         if (this.app.vault.getAbstractFileByPath(finalPath)) {
@@ -278,7 +278,7 @@ export class PreparedImage {
    */
   async renameTo(baseNoExt: string): Promise<TFile> {
     if (!this.persistedFile) throw new Error('rename requires writeFile() first');
-    const photosDir = `${this.subjectDir}/${this.photosSubdir}`;
+    const photosDir = normalizePath(`${this.subjectDir}/${this.photosSubdir}`);
     const safeBase = baseNoExt.replace(/[^a-z0-9_\-]/gi, '_').replace(/_+/g, '_').toLowerCase();
     let candidate = `${safeBase}.jpg`;
     let n = 2;
@@ -286,7 +286,7 @@ export class PreparedImage {
       candidate = `${safeBase}_${n}.jpg`;
       n++;
     }
-    const desiredPath = `${photosDir}/${candidate}`;
+    const desiredPath = normalizePath(`${photosDir}/${candidate}`);
     if (this.persistedFile.path === desiredPath) return this.persistedFile;
     this.logInfo(`Renaming photo to ${candidate}...`);
     await this.app.fileManager.renameFile(this.persistedFile, desiredPath);

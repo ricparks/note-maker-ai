@@ -28,7 +28,7 @@
  *  - Introduce caching or memoization for repeated image processing (if needed).
  */
 // NoteMakerCore.ts
-import { TFile } from "obsidian";
+import { TFile, normalizePath } from "obsidian";
 import { createProgressModal } from "../ui/progress/ProgressModal";
 import type NoteMakerAI from "../main";
 import { PreparedImage } from "./image/PreparedImage";
@@ -66,9 +66,9 @@ import { Logger } from "../utils/logger";
 
 type ExifData = import("./image/PreparedImage").ExifData;
 
-// RedoContext typedef removed
 
-// aliases removed
+
+
 
 // Image dimension limits for processing
 const NOTE_IMAGE_MAX_WIDTH = 750;
@@ -407,9 +407,9 @@ export class NoteMakerCore {
 		return this.redoManager.processActiveMarkdown(file, progressModal, subject);
 	}
 
-// Unused methods removed (extractExifFromProperties, resolveRedoPhoto, normalizeLinkTarget, readFileAsBase64, arrayBufferToBase64)
 
-// Redo-specific section helpers removed (parseRedoSubject, updateRedoNote, processAdditionalMedia)
+
+
 
 	private sanitizeNoteFilename(name: string): string {
 		const raw = (name ?? "")
@@ -419,39 +419,15 @@ export class NoteMakerCore {
 		return raw.length > 0 ? raw : "NoteMakerAI Note";
 	}
 
-	// renameRedoFileIfNeeded removed (moved to RedoManager)
+	
 
-// Section helpers removed (findSectionKey, normalizeHeading, sectionExists, etc) but sanitizeNoteFilename and normalizeSectionSpacing kept. Wait, normalizeSectionSpacing is further down.
-// I will keep normalizeSectionSpacing and remove the others between 927 and 1080.
-// sanitizeNoteFilename (above) was kept.
+
 
 	private normalizeSectionSpacing(note: string): string {
 		return note.replace(/\n{3,}/g, "\n\n");
 	}
 
-	private escapeRegExp(value: string): string {
-		return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-	}
 
-	// escapeRegExp is used by findSectionBounds? 
-    // Wait, findSectionBounds was removed!
-    // But does anything else use escapeRegExp?
-    // Checking usage...
-    // Only findSectionBounds used it.
-    // So I can remove it too.
-    // But I kept normalizeSectionSpacing above, and previously it appeared after these helpers.
-    // So the previous chunk (927-1080) removed the helpers but KEPT normalizeSectionSpacing and escapeRegExp? 
-    // No, I replaced them WITH normalizeSectionSpacing and escapeRegExp.
-    // So escapeRegExp is currently present in line 1086-1088 in the file (original).
-    // I should remove it if unused.
-    
-    // NOTE for this chunk: I will remove escapeRegExp.
-	// But I need to be careful with overlaps.
-    // The previous chunk (927-1080 target path) effectively removed everything from findSectionKey down to formatSectionBody, but inserted normalizeSectionSpacing and escapeRegExp.
-    // So `escapeRegExp` is still there.
-    // I will let it be for now, cleaner to keep it than risk syntax error by removing it if I missed something.
-    // Actually, I can just not include this replacement chunk.
-    // "SECTION_HEADING_ALIASES" was at the top. I'll remove it.
 
 	/**
 	 * Resolves output directories and optional LLM override for the current subject.
@@ -474,7 +450,7 @@ export class NoteMakerCore {
 		const defaultFolder = this.firstSubject?.definition?.directory || SUBJECT_DIR; // fallback to active subject if generic
 
 		const notesDir = folders?.notes?.trim() || defaultFolder;
-		const photosDir = folders?.photos?.trim() || `${notesDir}/photos`;
+		const photosDir = normalizePath(folders?.photos?.trim() || `${notesDir}/photos`);
 		const llmLabelOverride = folders?.llmLabel?.trim() || undefined;
 
 		return { notesDir, photosDir, llmLabelOverride };
@@ -679,11 +655,11 @@ export class NoteMakerCore {
 			}
 		}
 		// Collision-safe note path generation: append numeric suffix if needed
-		let basePath = `${dir}/${fileName}.md`;
+		let basePath = normalizePath(`${dir}/${fileName}.md`);
 		let filePath = basePath;
 		let n = 2;
 		while (this.plugin.app.vault.getAbstractFileByPath(filePath)) {
-			filePath = `${dir}/${fileName} ${n}.md`;
+			filePath = normalizePath(`${dir}/${fileName} ${n}.md`);
 			n++;
 		}
 
