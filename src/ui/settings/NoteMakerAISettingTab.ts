@@ -487,8 +487,8 @@ export class NoteMakerAISettingTab extends PluginSettingTab {
 		};
 
 		const defaultLlmSetting = new Setting(containerEl)
-			.setName("LLM to use")
-			.setDesc("Select an LLM from your defined LLMs above.");
+			.setName("Default LLM")
+			.setDesc("The fallback LLM to use when a subject does not specify an override.");
 		defaultLlmSetting.addDropdown((dd) => {
 			const selectEl = dd.selectEl;
 			selectEl.dataset.role = "llm-default-select";
