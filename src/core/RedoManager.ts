@@ -231,10 +231,19 @@ export class RedoManager {
 		);
 		this.redoContext.file = file;
 		
+        // Rename photo if the subject data has changed (e.g. Artist/Album name update)
+		const updatedPhoto = await this.renameRedoPhotoIfNeeded(
+			photoFile,
+			parsed,
+			progressModal,
+			subject
+		);
+		this.redoContext.photoFile = updatedPhoto;
+
 		const photoLink = this.plugin.app.fileManager
-			.generateMarkdownLink(photoFile, file.path)
+			.generateMarkdownLink(updatedPhoto, file.path)
 			.replace(/^!/, "");
-		const coverFileName = photoFile.name;
+		const coverFileName = updatedPhoto.name;
 
 		// Get components separately: pure markdown body and frontmatter object
 		const { frontmatter, body } = subject.definition!.getNoteParts(parsed, {
@@ -601,6 +610,52 @@ export class RedoManager {
 		progressModal.info(`Renamed note to ${displayName}`);
 		const updated = this.plugin.app.vault.getAbstractFileByPath(targetPath);
 		return updated instanceof TFile ? updated : file;
+	}
+
+	private async renameRedoPhotoIfNeeded(
+		photoFile: TFile,
+		parsed: SubjectInfoBase,
+		progressModal: ReturnType<typeof createProgressModal>,
+		subject: ActiveSubject
+	): Promise<TFile> {
+        // If subject definition doesn't support getPhotoBasename, we can't determine the correct name
+		if (typeof (subject.definition! as any).getPhotoBasename !== "function") {
+			return photoFile;
+		}
+
+		const desiredBaseName = (subject.definition! as any).getPhotoBasename(parsed);
+        // Current name without extension
+        const currentBaseName = photoFile.basename;
+
+		if (desiredBaseName === currentBaseName) {
+			return photoFile;
+		}
+
+		const dir = photoFile.parent ? photoFile.parent.path : "";
+        const ext = photoFile.extension;
+		const buildPath = (attempt: number) => {
+			const base = attempt === 0 ? desiredBaseName : `${desiredBaseName}_${attempt + 1}`;
+			return normalizePath(dir ? `${dir}/${base}.${ext}` : `${base}.${ext}`);
+		};
+
+		let attempt = 0;
+		let targetPath = buildPath(attempt);
+        // Avoid collision with EXISTING files (excluding itself)
+		while (targetPath !== photoFile.path) {
+			const existing = this.plugin.app.vault.getAbstractFileByPath(targetPath);
+			if (!existing) break;
+			attempt += 1;
+			targetPath = buildPath(attempt);
+		}
+
+		if (targetPath === photoFile.path) {
+			return photoFile;
+		}
+
+		await this.plugin.app.fileManager.renameFile(photoFile, targetPath);
+		progressModal.info(`Renamed photo to ${targetPath.split('/').pop()}`);
+		const updated = this.plugin.app.vault.getAbstractFileByPath(targetPath);
+		return updated instanceof TFile ? updated : photoFile;
 	}
 
     private findSectionKey(
