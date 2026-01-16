@@ -23,6 +23,7 @@ export interface FileDefinedNaming {
  */
 export interface SubjectDefinitionFile {
   id?: string; // Optional stable identifier
+  sdf_version?: string; // Optional version string
   subject_name: string;
   icon: string;
   naming: FileDefinedNaming;

@@ -1,4 +1,6 @@
 subject_name: "Album"
+id: "album"
+sdf_version: "1.0"
 icon: "disc"
 
 validate_subject: true
@@ -25,6 +27,8 @@ properties:
     - key: "is_reviewed"
       default: false
       touch_me_not: true
+    - key: "sdf_version"
+      default: "{{sdf_version}}"
 
 sections:
     - heading: "Track List"

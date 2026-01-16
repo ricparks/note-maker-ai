@@ -69,6 +69,27 @@ To fix this, you can assign a stable `id`.
 By explicitly setting `id: "wine"`, the system knows that "Vino" is just a new label for the same subject, allowing you to use Redo on your old "Wine" notes without safety warnings.
  
 ---
+
+## File Versioning
+
+You can add a version number to your Subject Definition File to keep track of changes.
+
+```yaml
+subject_name: "Album"
+sdf_version: "1.0"
+```
+
+To expose this version in your generated notes, add a property that uses the `{{sdf_version}}` placeholder as its default value:
+
+```yaml
+properties:
+  - key: "sdf_version" 
+    default: "{{sdf_version}}"
+```
+
+This will automatically inject "1.0" (or whatever is at the top of your file) into the `sdf_version` property of every new note.
+
+---
  
 ## Field Reference
 

@@ -108,6 +108,7 @@ ${trailing_prompt}`;
       // Check in base info (title, producer)
       if (key === 'title') return info.title;
       if (key === 'producer') return info.producer || '';
+      if (key === 'sdf_version') return this.definition.sdf_version || '';
       
       return ''; // Fallback to empty
     });
@@ -167,7 +168,12 @@ ${trailing_prompt}`;
     // Inject defaults for any missing keys
     for (const prop of this.definition.properties) {
       if (prop.default !== undefined && (result.fields[prop.key] === undefined || result.fields[prop.key] === null || result.fields[prop.key] === "")) {
-        result.fields[prop.key] = prop.default;
+        let defVal = prop.default;
+        if (typeof defVal === 'string') {
+           // Apply templates to the default value (e.g. "{{sdf_version}}")
+           defVal = this.applyTemplate(defVal, result);
+        }
+        result.fields[prop.key] = defVal;
       }
     }
 
