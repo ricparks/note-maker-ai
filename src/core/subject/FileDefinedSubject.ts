@@ -103,7 +103,10 @@ ${trailing_prompt}`;
     return template.replace(/\{\{([^}]+)\}\}/g, (match, key) => {
       // Check in fields
       if (key in info.fields) {
-        return String(info.fields[key] || '');
+        const val = info.fields[key];
+        // Ensure we don't treat false or 0 as empty string
+        if (val === undefined || val === null) return '';
+        return String(val);
       }
       // Check in base info (title, producer)
       if (key === 'title') return info.title;
