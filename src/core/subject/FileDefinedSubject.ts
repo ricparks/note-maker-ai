@@ -88,7 +88,7 @@ ${trailing_prompt}`;
     // Handle Redo / Prompt Additions
     if (context.noteData) {
       const sections = context.noteData.sections;
-      const additions = sections['Prompt Additions'] || sections['PA'] || sections['pa'];
+      const additions = sections['Redo Instructions'] || sections['RI'] || sections['ri'];
       if (additions && additions.trim().length > 0) {
         finalPrompt += `\n\nIMPORTANT: The user has provided additional instructions for this request:\n${additions.trim()}`;
       }
@@ -299,5 +299,11 @@ ${trailing_prompt}`;
     }
     
     return warnings;
+  }
+
+  getPreservedFields(): string[] {
+    return this.definition.properties
+      .filter(p => p.touch_me_not === true)
+      .map(p => p.key);
   }
 }

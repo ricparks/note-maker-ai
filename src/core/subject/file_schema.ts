@@ -4,6 +4,7 @@ export interface FileDefinedProperty {
   instruction?: string;
   type?: string;
   default?: any;
+  touch_me_not?: boolean;
 }
 
 export interface FileDefinedSection {

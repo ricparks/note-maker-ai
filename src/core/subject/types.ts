@@ -67,7 +67,7 @@ export interface SubjectDefinition<T extends SubjectInfoBase = SubjectInfoBase> 
    *   when the note is regenerated. Without this section, users lose their personal notes
    *   on redo.
    * 
-   * - **`#### Prompt Additions`** (optional, alias: `PA`): If present, content here is
+   * - **`#### Redo Instructions`** (optional, alias: `RI`): If present, content here is
    *   appended to the AI prompt during redo, allowing users to guide regeneration
    *   (e.g., "Focus more on the author's background").
    * 
@@ -99,6 +99,8 @@ export interface SubjectDefinition<T extends SubjectInfoBase = SubjectInfoBase> 
   parseExistingNote?(note: SubjectExistingNoteContext): SubjectNoteData | Promise<SubjectNoteData>;
   /** Optional hook to validate parsed data and return a list of warning messages. */
   validateParsedData?(info: T): string[];
+  /** Optional hook to return a list of property keys that should not be overwritten during Redo. */
+  getPreservedFields?(): string[];
 }
 
 /**

@@ -23,7 +23,8 @@ properties:
     - key: "is_digital"
       instruction: "Leave blank"
     - key: "is_reviewed"
-      instruction: "Leave blank"
+      default: false
+      touch_me_not: true
 
 sections:
     - heading: "Track List"

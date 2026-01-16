@@ -23,8 +23,8 @@ const NOTE_IMAGE_MAX_HEIGHT = 1000;
 const AI_IMAGE_MAX_DIM = 512;
 
 const SECTION_HEADING_ALIASES: Record<string, string[]> = {
-	"prompt additions": ["pa"],
-	pa: ["prompt additions"],
+	"redo instructions": ["ri"],
+	ri: ["redo instructions"],
 	"additional media": ["media"],
 	media: ["additional media"],
 };
@@ -115,8 +115,8 @@ export class RedoManager {
 		
 		// DEBUG logging for prompt generation
 		Logger.info(`[NoteMakerAI] Processing active markdown: ${file.name}`);
-		const additions = noteData.sections['Prompt Additions'] || noteData.sections['PA'] || noteData.sections['pa'];
-		Logger.debug(`[NoteMakerAI] Extracted PA for ${file.name}:`, additions ? additions.slice(0, 50) + "..." : "None");
+		const additions = noteData.sections['Redo Instructions'] || noteData.sections['RI'] || noteData.sections['ri'];
+		Logger.debug(`[NoteMakerAI] Extracted RI for ${file.name}:`, additions ? additions.slice(0, 50) + "..." : "None");
 		
 		const photoFile = this.resolveRedoPhoto(noteData, file, content);
 		if (!photoFile) {
@@ -245,7 +245,7 @@ export class RedoManager {
 
 		const sections = { ...noteData.sections };
 		const myNotesKey = this.findSectionKey(sections, "My Notes");
-		const promptKey = this.findSectionKey(sections, "Prompt Additions");
+		const promptKey = this.findSectionKey(sections, "Redo Instructions");
 
 		// We merge SECTIONS into the BODY logic
 		let updatedBody = body;
@@ -254,9 +254,9 @@ export class RedoManager {
 		}
 		if (promptKey) {
 			const promptBody = sections[promptKey] ?? "";
-			const exists = this.sectionExists(updatedBody, promptKey) || this.sectionExists(updatedBody, "Prompt Additions");
+			const exists = this.sectionExists(updatedBody, promptKey) || this.sectionExists(updatedBody, "Redo Instructions");
 			if (exists) {
-				updatedBody = this.replaceSectionVariants(updatedBody, [promptKey, "Prompt Additions"], promptBody);
+				updatedBody = this.replaceSectionVariants(updatedBody, [promptKey, "Redo Instructions"], promptBody);
 			} else {
 				const afterCandidates = myNotesKey ? [myNotesKey, "My Notes"] : ["My Notes"];
 				updatedBody = this.insertSectionAfter(updatedBody, afterCandidates, promptKey, promptBody);
@@ -293,9 +293,20 @@ export class RedoManager {
 			// Step 2: Update Frontmatter atomically.
 			// This preserves any user custom properties that we aren't explicitly overwriting,
 			// while updating the ones we care about.
+			const preservedFields = new Set<string>();
+			if (typeof (subject.definition! as any).getPreservedFields === "function") {
+				const keys = (subject.definition! as any).getPreservedFields() as string[];
+				keys.forEach(k => preservedFields.add(k));
+			}
+
 			await this.plugin.app.fileManager.processFrontMatter(file, (fm) => {
 				// Inject the new properties
 				for (const [key, value] of Object.entries(frontmatter)) {
+					// Check if this field is protected from overwrite AND already exists
+					if (preservedFields.has(key) && fm[key] !== undefined) {
+						// Skip overwrite
+						continue;
+					}
 					fm[key] = value;
 				}
 				// Note: We do NOT delete keys that are missing in new 'frontmatter'.

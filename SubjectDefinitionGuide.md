@@ -87,6 +87,7 @@ By explicitly setting `id: "wine"`, the system knows that "Vino" is just a new l
 | `properties[].instruction` | String | **Optional.** Instruction for the AI. If omitted, `default` must be set. |
 | `properties[].type` | String | **Optional.** Set to `sequence` (or `list`, `array`) to enforce a list format. |
 | `properties[].default` | Any | **Optional.** Default value to use if AI extraction fails or if instruction is omitted. |
+| `properties[].touch_me_not` | Boolean | **Optional.** If `true`, this property will NOT be overwritten during a Redo operation, preserving any manual edits. |
 | `sections` | Array | **Required.** List of Markdown sections to generate content for. |
 | `lead_prompt` | String | **Required.** The opening instruction to the AI (role and goal). |
 | `trailing_prompt` | String | **Required.** The closing instruction, usually enforcing JSON format. |
@@ -110,3 +111,15 @@ If you enable `validate_subject: true`, you must include instructions in your sp
 > - `reason`: short explanation"
 
 If the AI returns `subject_match: false` and the `confidence` is higher than your `validation_threshold`, NoteMaker AI will warn you.
+
+## Redo Instructions
+
+When you use the **Redo** command on an existing note, you can guide the AI to make specific changes by adding a special section called `#### Redo Instructions` (or alias `#### RI`).
+
+**Example:**
+```markdown
+#### Redo Instructions
+The previous summary was too long. Please make it more concise and focus on the track production details.
+```
+
+When NoteMaker AI regenerates the note, it will include these instructions in the prompt. This section is temporary and only used for the generation process; you can delete or update it as needed.
