@@ -236,6 +236,7 @@ ${trailing_prompt}`;
       }
       content = content || '';
 
+      contentLines.push('');
       contentLines.push(`#### ${heading}`);
       contentLines.push(String(content).trim());
     }
