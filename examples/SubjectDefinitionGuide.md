@@ -144,3 +144,19 @@ The previous summary was too long. Please make it more concise and focus on the 
 ```
 
 When NoteMaker AI regenerates the note, it will include these instructions in the prompt. This section is temporary and only used for the generation process; you can delete or update it as needed.
+
+## Special Placeholders
+
+### {{original_image}}
+
+You can use the `{{original_image}}` placeholder as a default value for any property. If used, it will be replaced by a wiki-link to the original image file (e.g., `[[MyPhoto.jpg]]`).
+
+**Important Behavior:**
+Using this placeholder **forces the system to keep the original image file**, even if you have enabled "Delete original after resize" in the settings. This ensures the link remains valid.
+
+**Example:**
+```yaml
+properties:
+  - key: "original_photo"
+    default: "{{original_image}}"
+```

@@ -1,100 +1,59 @@
 # NoteMakerAI for Obsidian
 
-Turn a photo into a structured note in Obsidian using AI. This reference implementation processes book covers, and is designed to be forked and adapted for other subjects (Wine, Albums, Plants, etc.).
+**Turn any photo into a structured Obsidian note using AI.**
 
-## Development
+NoteMakerAI processes images, for example, book covers, wine labels, album art, or plants and uses your chosen AI provider to generate rich, structured notes in your vault. NoteMakerAI is an ideal way to create bases to manage your collections. It allows you to define your own subject with a simple YAML syntax and convert photos of your collection into notes with standard frontmatter properties based on your definition. It supports group selection for batch processing and allows you to redo individual notes with specific instructions for that single note. You must BYOK (Bring Your Own Key) for your own AI provider. 
 
-Prereqs:
-- Node.js LTS (18+ recommended)
-- npm
+## Features
 
-Install and build:
-- Install deps: `npm install`
-- Dev (watch): `npm run dev`
-- Production build: `npm run build`
+*   **AI-Powered Analysis**: Sends the image to your AI provider to identify titles, authors, descriptions, vintages, and more depending on the subject.
+*   **Flexible Subjects**: Comes with built-in support for Books, Albums, and Wine but is designed to be easily extensible for any collection (Coins, Plants, etc.).
+*   **Supports Major AI Providers**: Including OpenAI, Google Gemini, Anthropic, and OpenRouter.
+*   **Seamless Integration**: Works entirely within Obsidian. Snap a photo, drop it in your vault, and click the button.
+*   **Smart Image Handling**: Automatically resizes and optimizes images to minimize the footprint in your vault and LLM tokens used.
+*   **Iterative Refinement**: Not happy with the result? Use the "Redo" command to provide specific instructions (e.g., "Use the narrative voice of Hunter S. Thompson.") and regenerate the note.
 
-Manual install for testing:
-Copy `main.js`, `manifest.json`, and optional `styles.css` to your vault at:
-`<Vault>/.obsidian/plugins/note-maker-ai/`
+## Installation
 
-## Usage
+### Beta Installation (via BRAT)
+Since this plugin is currently in Beta, the easiest way to install it is using the **BRAT** plugin.
 
-- In Obsidian, enable the plugin: Settings -> Community plugins -> Enable NoteMakerAI.
-- Open a JPG/PNG image (e.g., a book cover) in your vault.
-- Click the diamond-plus ribbon icon to process the active image.
-- A progress modal will show steps. When done, a new note appears under the subject’s folder (e.g., `Bases/Books`).
-	- Configure AI provider in Settings -> NoteMakerAI.
-	- Add your API key for the selected provider (OpenAI or Gemini).
+**Note:** During this initial Beta phase, installation requires a GitHub token. Please email `ric@notemakerai.com` to request one.
 
-## Creating a New Subject
+1.  Install **BRAT** from the Obsidian Community Plugins list.
+2.  Open the BRAT settings and enter your token in the "GitHub User Name" / token field if required, or simply ensure you have access.
+3.  Click **Add Beta plugin**.
+4.  Paste the URL of this repository: `https://github.com/ricparks/note-maker-ai` (or your fork's URL).
+5.  Click **Add Plugin**.
+6.  Enable **NoteMakerAI** in your Community Plugins list.
 
-This project is designed to be forked and customized for different subjects (Wine, Albums, Plants, etc.).
+### Manual Installation
+For users who want to test the latest unreleased changes:
+1.  Download the latest release from GitHub.
+2.  Extract the files (`main.js`, `manifest.json`, `styles.css`) to `<VaultFolder>/.obsidian/plugins/note-maker-ai/`.
+3.  Reload Obsidian.
 
-**Two guides available:**
-- **[FORKING.md](./FORKING.md)** - Complete technical guide with code examples
-- **[FORKING-AI.md](./FORKING-AI.md)** - Copy-paste prompts for AI-assisted development (Cursor, Copilot, etc.)
+## Quick Start Information
 
-Quick overview:
-1. Fork this repository
-2. Update `manifest.json` with your plugin identity
-3. Replace `src/core/subject/implementation.ts` with your subject
-4. Update `src/core/subject/index.ts` to export your subject
-5. Build and test
+1.  **Configure AI**: Go to **Settings** > **NoteMakerAI** and enter your API key for your preferred provider (e.g., OpenAI or Gemini) and specify the model to use. Note that you can enter multiple AI vendors and their keys. You might want to use different models for different subjects.
+2.  **There are three example subjects in the examples directory**: `Books`, `Albums`, and `Wine`. You can use these as templates for your own subjects or use them as is. Copy the subject definition file for your desired subject to your vault. 
+3. **Configure your subject in the plugin settings**: You'll need to specify the location of the subject definition file in your vault as well as the target directory for the newly created notes and reduced images.
+4.  **Capture**: Drag and drop an image (JPG/PNG) into your Obsidian vault.
+5.  **Process**: Open the image note and click the **NoteMaker** ribbon icon for your subject on the left sidebar. You can also select multiple images from the files view for batch processing. 
+6.  **Result**: Watch the progress modal as the AI analyzes the image. A new note will be created in the designated folder (e.g., `Bases/Books`) with all extracted metadata.
 
+## Customization: Subject Definition Files (SDFs)
 
-## PreparedImage usage (for contributors)
+NoteMakerAI is built on the concept of **Subject Definition Files (SDFs)**. These are Markdown files that contain YAML to tell the AI what to look for and how to format the result.
 
-`PreparedImage` encapsulates image preparation as a stateful object: it loads and measures the source, optionally resizes to JPEG in memory, writes a note-ready photo into `subject/photos`, and provides a small AI base64 for model calls. It runs in Obsidian’s browser-like environment and uses canvas for reliable JPEG generation.
+You can find examples in the `examples/` directory of this repository or create your own. An SDF allows you to:
+*   Define specific prompts for the AI.
+*   Define the frontmatter properties of the generated note.
+*   Set the naming convention for new files.
 
-Key points:
-- Measure without writing: converts bytes to a temporary object URL and inspects `naturalWidth`/`naturalHeight`.
-- Resize to JPEG with SOI/EOI checks and dataURL fallback when needed.
-- Write/move via Obsidian vault APIs; optionally delete originals based on settings.
-- Convert buffers to base64 for AI ingestion.
-
-### Typical flow: prepare in memory, then write
-
-```ts
-import type { App, TFile } from 'obsidian';
-import { PreparedImage } from 'src/core/image/PreparedImage';
-
-async function processPhoto(app: App, file: TFile) {
-	const preparedImage = new PreparedImage(app, file, {
-		subjectDir: 'Bases/Books',
-		maxW: 750,
-		maxH: 1000,
-		keepOriginal: false,
-		logger: { info: console.log, error: console.error },
-	});
-	const ok = await preparedImage.ensurePrepared();
-	if (!ok) throw new Error('Failed to prepare image');
-	const noteBase64 = preparedImage.getNoteBase64();
-	const outFile = await preparedImage.writeFile();
-	// Optional: collision-safe rename after you know the canonical base name
-	// const renamed = await preparedImage.renameTo('author_title_year');
-	return { outFile, noteBase64 };
-}
-```
-
-### Producing a small AI-specific JPEG (<=512px)
-
-```ts
-import type { App, TFile } from 'obsidian';
-import { PreparedImage } from 'src/core/image/PreparedImage';
-
-async function makeAiImageBase64(app: App, file: TFile) {
-	const preparedImage = new PreparedImage(app, file, { subjectDir: 'Bases/Books' });
-	const ok = await preparedImage.ensurePrepared();
-	if (!ok) throw new Error('Failed to prepare image');
-	return await preparedImage.getAiImageBase64();
-}
-```
-
-### Notes
-
-- Requires canvas/DOM APIs (works in Obsidian desktop/mobile). If a 2D context isn’t available, writing/resizing will throw.
-- JPEG writes use `vault.createBinary` (available at runtime). Ensure destination folders exist.
-- Logger object with `info` and `error` is optional.
-- EXIF orientation isn’t adjusted yet; could be added inside the resizing step.
+See `examples/SubjectDefinitionGuide.md` for a complete reference of the SDF format.
 
 
+## License
+
+This project is licensed under the [AGPLv3 License](LICENSE).

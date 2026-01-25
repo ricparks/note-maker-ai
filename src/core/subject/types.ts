@@ -43,6 +43,8 @@ export interface SubjectInfoBase {
   raw: any;
   // Arbitrary structured fields (normalized key/value pairs)
   fields: Record<string, string | number | boolean | null | any[]>;
+  // Internal flag: true if the {{original_image}} placeholder was substituted
+  _usedOriginalImagePlaceholder?: boolean;
 }
 
 export interface SubjectNoteSections {
@@ -115,7 +117,7 @@ export interface SubjectDefinition<T extends SubjectInfoBase = SubjectInfoBase> 
    */
   getNoteParts(info: T, context: { photoLink?: string; coverFileName?: string; exifData?: import('../image/PreparedImage').ExifData; llmModel?: string }): { frontmatter: Record<string, any>; body: string };
   buildNote(info: T, context: { photoLink?: string; coverFileName?: string; exifData?: import('../image/PreparedImage').ExifData; llmModel?: string }): string;
-  parse(aiJson: any): T;      // map AI JSON to typed structure with fallbacks
+  parse(aiJson: any, context?: { originalImage?: TFile }): T;      // map AI JSON to typed structure with fallbacks
   // Optional per-subject note directory (relative inside vault). If omitted, fallback constant used.
   directory?: string;
   /** Optional hook to compute a canonical base photo file name (without extension). */

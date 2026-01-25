@@ -97,8 +97,6 @@ type ExifData = import("./image/PreparedImage").ExifData;
 
 
 
-
-
 // Image dimension limits for processing
 const NOTE_IMAGE_MAX_WIDTH = 750;
 const NOTE_IMAGE_MAX_HEIGHT = 1000;
@@ -341,7 +339,10 @@ export class NoteMakerCore {
 
 		let parsed: SubjectInfoBase | null = null;
 		try {
-			parsed = subject.definition!.parse(resultCtx.data);
+			// Pass the original file (sourceFile) context for placeholder resolution
+			parsed = subject.definition!.parse(resultCtx.data, { 
+				originalImage: preparedImage.getPreparedFile() || file // try prepared/moved file, then original
+			});
 		} catch (e) {
 			Logger.error("Failed to parse subject data", e, resultCtx.data);
 		}
@@ -427,7 +428,15 @@ export class NoteMakerCore {
 			);
 			
 			if (success) {
-				await preparedImage.deleteOriginal();
+				if (parsed._usedOriginalImagePlaceholder) {
+					// FEATURE: If the subject definition used {{original_image}}, we MUST keep the file
+					if (this.plugin.settings.image?.keepOriginalAfterResize === false) {
+						progressModal.info("Note: Original image preserved (referenced by {{original_image}}).");
+					}
+					// Do not call deleteOriginal
+				} else {
+					await preparedImage.deleteOriginal();
+				}
 			}
 		} else {
 			progressModal.error(FAILED_GET_SUBJECT);
@@ -444,10 +453,6 @@ export class NoteMakerCore {
 		return this.redoManager.processActiveMarkdown(file, progressModal, subject);
 	}
 
-
-
-
-
 	private sanitizeNoteFilename(name: string): string {
 		const raw = (name ?? "")
 			.replace(/[\\/:?*"<>|]/g, " ")
@@ -456,15 +461,9 @@ export class NoteMakerCore {
 		return raw.length > 0 ? raw : "NoteMakerAI Note";
 	}
 
-	
-
-
-
 	private normalizeSectionSpacing(note: string): string {
 		return note.replace(/\n{3,}/g, "\n\n");
 	}
-
-
 
 	/**
 	 * Resolves output directories and optional LLM override for the current subject.
@@ -543,8 +542,6 @@ export class NoteMakerCore {
 					: subject.definition!.prompt;
 		}
 
-
-
 		Logger.info(
 			`[NoteMakerAI] Fetching subject JSON (promptOverride=${!!promptOverride}). Prompt length: ${prompt.length}`
 		);
@@ -569,8 +566,6 @@ export class NoteMakerCore {
 		}
 
 		Logger.info(`[NoteMakerAI] Using LLM: ${vendor} / ${model} (${llmLabel})`);
-
-
 
 		let result: AiResult;
 		if (vendor === "openai") {

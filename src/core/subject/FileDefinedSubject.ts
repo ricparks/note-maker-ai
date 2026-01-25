@@ -128,8 +128,19 @@ ${trailing_prompt}`;
   /**
    * Simple templating engine: replaces {{key}} with value from info.fields.
    */
-  private applyTemplate(template: string, info: SubjectInfoBase): string {
-    return template.replace(/\{\{([^}]+)\}\}/g, (match, key) => {
+  private applyTemplate(template: string, info: SubjectInfoBase, context?: { originalImage?: any }): { result: string; usedOriginalImage: boolean } {
+    let usedOriginalImage = false;
+    const result = template.replace(/\{\{([^}]+)\}\}/g, (match, key) => {
+      // Special case: {{original_image}}
+      if (key === 'original_image') {
+        if (context?.originalImage) {
+          usedOriginalImage = true;
+          // Return wiki-link format for the original image
+          return `[[${context.originalImage.name}]]`;
+        }
+        return ''; // Or keep {{original_image}}? For now, empty if not available.
+      }
+
       // Check in fields
       if (key in info.fields) {
         const val = info.fields[key];
@@ -144,6 +155,7 @@ ${trailing_prompt}`;
       
       return ''; // Fallback to empty
     });
+    return { result, usedOriginalImage };
   }
 
   private slugify(text: string): string {
@@ -162,19 +174,19 @@ ${trailing_prompt}`;
 
   getNoteFilename(info: SubjectInfoBase): string {
     const template = this.definition.naming?.note || "{{title}}";
-    const raw = this.applyTemplate(template, info);
+    const { result: raw } = this.applyTemplate(template, info);
     // Sanitize for file system
     return this.sanitizeFilename(raw) || 'Untitled Note';
   }
 
   getPhotoBasename(info: SubjectInfoBase): string {
     const template = this.definition.naming?.photo || "image";
-    const raw = this.applyTemplate(template, info);
+    const { result: raw } = this.applyTemplate(template, info);
     // Slugify for photo filenames (convention prefer snake_case/lowercase for assets)
     return this.slugify(raw) || 'image';
   }
 
-  parse(aiJson: any): SubjectInfoBase {
+  parse(aiJson: any, context?: { originalImage?: any }): SubjectInfoBase {
     // Pass-through parsing. We trust the keys match what we asked for.
     // We try to identify 'title' and 'producer' (author) for the Base system.
     
@@ -194,7 +206,8 @@ ${trailing_prompt}`;
       title: String(title),
       producer: String(producer),
       raw: aiJson,
-      fields: aiJson
+      fields: aiJson,
+      _usedOriginalImagePlaceholder: false
     };
 
     // Inject defaults for any missing keys
@@ -202,8 +215,12 @@ ${trailing_prompt}`;
       if (prop.default !== undefined && (result.fields[prop.key] === undefined || result.fields[prop.key] === null || result.fields[prop.key] === "")) {
         let defVal = prop.default;
         if (typeof defVal === 'string') {
-           // Apply templates to the default value (e.g. "{{sdf_version}}")
-           defVal = this.applyTemplate(defVal, result);
+           // Apply templates to the default value (e.g. "{{sdf_version}}", "{{original_image}}")
+           const { result: val, usedOriginalImage } = this.applyTemplate(defVal, result, context);
+           defVal = val;
+           if (usedOriginalImage) {
+             result._usedOriginalImagePlaceholder = true;
+           }
         }
         result.fields[prop.key] = defVal;
       }
