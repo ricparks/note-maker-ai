@@ -75,7 +75,10 @@ export class FileDefinedSubject implements SubjectDefinition<SubjectInfoBase> {
       }
       return `- ${p.key}: ${instr}`;
     }).join('\n');
-    const sectionsList = sections.map(s => `- ${s.heading}: ${s.instruction}`).join('\n');
+
+    // Filter out sections that are marked as user-only via {{my_notes}}
+    const promptSections = sections.filter(s => !s.instruction?.includes('{{my_notes}}'));
+    const sectionsList = promptSections.map(s => `- ${s.heading}: ${s.instruction}`).join('\n');
     
     // We also construct a robust JSON example dynamically to help the LLM structure correctly
     const exampleObj: Record<string, any> = {};
@@ -86,7 +89,7 @@ export class FileDefinedSubject implements SubjectDefinition<SubjectInfoBase> {
         exampleObj[p.key] = "...";
       }
     });
-    sections.forEach(s => exampleObj[s.heading] = "...");
+    promptSections.forEach(s => exampleObj[s.heading] = "...");
     
     // Combine standard meta fields that are always requested in trailing_prompt
     // (Note: trailing_prompt in the file already contains specific JSON requirements/examples, 
@@ -263,10 +266,6 @@ ${trailing_prompt}`;
     // 2. Build Content Body
     const contentLines: string[] = [];
 
-    // Framework Section: My Notes (Must exist for Redo)
-    contentLines.push(`#### My Notes`);
-    contentLines.push(''); // Empty by default
-
     // Dynamic Sections from Definition
     for (const sec of sections) {
       const heading = sec.heading;
@@ -280,6 +279,8 @@ ${trailing_prompt}`;
           content = fields[matchingKey];
         }
       }
+      // For {{my_notes}} sections, content from AI will be undefined/empty (excluded from prompt),
+      // which is correct (initially empty).
       content = content || '';
 
       contentLines.push('');
@@ -362,4 +363,11 @@ ${trailing_prompt}`;
       .filter(p => p.touch_me_not === true)
       .map(p => p.key);
   }
+
+  getMyNotesSectionHeadings(): string[] {
+    return this.definition.sections
+      .filter(s => s.instruction?.includes('{{my_notes}}'))
+      .map(s => s.heading);
+  }
+
 }

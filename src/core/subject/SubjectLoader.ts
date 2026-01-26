@@ -181,16 +181,23 @@ function validateSubjectDefinition(def: any): string[] {
 }
 
 /**
- * Extracts content from within ``` markdown code blocks, or returns the raw content
- * if no code blocks are found (assuming pure YAML).
+ * Extracts content from within ``` markdown code blocks, or standard frontmatter (---),
+ * or returns the raw content if neither is found (assuming pure YAML).
  */
 function extractYamlFromMarkdown(content: string): string {
-  // Look for ```yaml or just ``` blocks
+  // 1. Look for Frontmatter (--- ... ---) at the very start of the file
+  // We match ^---\s*\n to ensure it starts on the first line
+  const frontmatterMatch = content.match(/^---\s*[\r\n]+([\s\S]*?)[\r\n]+---/);
+  if (frontmatterMatch) {
+    return frontmatterMatch[1];
+  }
+
+  // 2. Look for ```yaml or just ``` blocks
   const match = content.match(/^```(?:yaml)?\s*([\s\S]*?)\s*```/m);
   if (match) {
     return match[1];
   }
-  // Fallback: If no code blocks, assume the whole file is the content (unless it looks like prose)
-  // For now, simplistically return the content if it looks like key-value pairs
+  
+  // Fallback: If no code blocks or frontmatter, assume the whole file is the content
   return content;
 }

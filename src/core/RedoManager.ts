@@ -282,22 +282,41 @@ export class RedoManager {
 		});
 
 		const sections = { ...noteData.sections };
-		const myNotesKey = this.findSectionKey(sections, "My Notes");
+		
+		// My Notes handling
+		const myNotesHeadings = typeof (subject.definition! as any).getMyNotesSectionHeadings === "function" 
+			? (subject.definition! as any).getMyNotesSectionHeadings() as string[] 
+			: [];
+
 		const promptKey = this.findSectionKey(sections, "Redo Instructions");
 
 		// We merge SECTIONS into the BODY logic
 		let updatedBody = body;
-		if (myNotesKey) {
-			updatedBody = this.replaceSectionVariants(updatedBody, [myNotesKey, "My Notes"], sections[myNotesKey] ?? "");
+
+		// Inject My Notes sections
+		for (const myNotesHeading of myNotesHeadings) {
+			const myNotesKey = this.findSectionKey(sections, myNotesHeading);
+			if (myNotesKey) {
+				updatedBody = this.replaceSectionVariants(updatedBody, [myNotesKey, myNotesHeading], sections[myNotesKey] ?? "");
+			}
 		}
+
 		if (promptKey) {
 			const promptBody = sections[promptKey] ?? "";
 			const exists = this.sectionExists(updatedBody, promptKey) || this.sectionExists(updatedBody, "Redo Instructions");
 			if (exists) {
 				updatedBody = this.replaceSectionVariants(updatedBody, [promptKey, "Redo Instructions"], promptBody);
 			} else {
-				const afterCandidates = myNotesKey ? [myNotesKey, "My Notes"] : ["My Notes"];
-				updatedBody = this.insertSectionAfter(updatedBody, afterCandidates, promptKey, promptBody);
+				// If promptKey doesn't exist, insert it. Priority: after the first MyNotes section, or just at end?
+				// Logic: Insert after the LAST detected MyNotes section, or fall back to "My Notes" alias
+				
+				let afterCandidates = ["My Notes"];
+				if (myNotesHeadings.length > 0) {
+					afterCandidates = myNotesHeadings.map(h => this.normalizeHeading(h));
+				}
+				
+				// We need original casing for exact matches in insertSectionAfter, assume myNotesHeadings are correct.
+				updatedBody = this.insertSectionAfter(updatedBody, myNotesHeadings.length > 0 ? myNotesHeadings : ["My Notes"], promptKey, promptBody);
 			}
 		}
 
