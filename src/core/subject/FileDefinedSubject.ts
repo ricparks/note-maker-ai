@@ -95,9 +95,10 @@ export class FileDefinedSubject implements SubjectDefinition<SubjectInfoBase> {
     // (Note: trailing_prompt in the file already contains specific JSON requirements/examples, 
     // but we inject the specific fields list to be sure).
 
-    const exampleJson = JSON.stringify(exampleObj, null, 2);
     
-  return `${lead_prompt}
+    const exampleJson = JSON.stringify(exampleObj, null, 2);
+
+    let base = `${lead_prompt}
 
 Extract these Properties:
 ${propsList}
@@ -109,6 +110,12 @@ Return your response as JSON matching this exact structure:
 ${exampleJson}
 
 ${trailing_prompt}`;
+
+    if (this.validateSubject) {
+      base += `\n\nAlso return a field 'subject_match' (boolean) and 'confidence' (0.0 to 1.0) indicating if this image matches the expected subject. If subject_match is false, provide a short 'reason' string.`;
+    }
+
+    return base;
   }
 
   /**

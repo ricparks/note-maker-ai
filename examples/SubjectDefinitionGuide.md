@@ -199,16 +199,19 @@ validate_subject: true
 validation_threshold: 0.8
 ```
 
-You **must** add instructions to your `trailing_prompt` for this to work:
-> "Also return a field 'subject_match' (boolean) and 'confidence' (0.0 to 1.0) indicating if this image matches the expected subject."
+You **must** add details to your `trailing_prompt` ONLY if you want to customize the validation logic. NoteMaker automatically appends the request for `subject_match` and `confidence` when this feature is enabled.
 
 ### Versioning
 You can version your definition file to track changes in your notes.
 
-1.  Add `sdf_version: "1.2"` to the top level of your YAML.
-2.  Add a property to store it:
-    ```yaml
-    properties:
-      - key: "template_version"
-        default: "{{sdf_version}}"
-    ```
+1.  Add `sdf_version` to the top level of your YAML.
+2.  Add a property to store it using the `{{sdf_version}}` placeholder.
+
+```yaml
+subject_name: "Recipe"
+sdf_version: "1.2"  <-- Define version here
+
+properties:
+  - key: "template_version"
+    default: "{{sdf_version}}" # <--- Store it in the note
+```
