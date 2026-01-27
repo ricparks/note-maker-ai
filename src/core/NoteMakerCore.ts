@@ -545,6 +545,7 @@ export class NoteMakerCore {
 		Logger.info(
 			`[NoteMakerAI] Fetching subject JSON (promptOverride=${!!promptOverride}). Prompt length: ${prompt.length}`
 		);
+		Logger.info(`[NoteMakerAI] Full Prompt: ${prompt}`);
 
 		const llmConfig = this.resolveLlmConfig(llmLabelOverride);
 		if (!llmConfig) {

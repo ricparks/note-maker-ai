@@ -65,8 +65,9 @@ export class FileDefinedSubject implements SubjectDefinition<SubjectInfoBase> {
   private buildBasePrompt(): string {
     const { lead_prompt, properties, sections, trailing_prompt } = this.definition;
 
-    // prompt properties: exclude ones that have a default AND no instruction
-    const promptProperties = properties.filter(p => !p.default || p.instruction);
+    // prompt properties: STRICTLY exclude ones that have a default. 
+    // If a default is set, we use it locally. We do NEVER ask the AI for it, even if an instruction is present.
+    const promptProperties = properties.filter(p => p.default === undefined && p.instruction);
 
     const propsList = promptProperties.map(p => {
       let instr = p.instruction || "Extract value";
