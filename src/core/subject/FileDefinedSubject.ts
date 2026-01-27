@@ -309,7 +309,14 @@ ${trailing_prompt}`;
 
   buildNote(info: SubjectInfoBase, context: { coverFileName?: string; llmModel?: string }): string {
     const { frontmatter, body } = this.getNoteParts(info, context);
-    const yamlString = stringifyYaml(frontmatter).trim();
+    let yamlString = stringifyYaml(frontmatter).trim();
+    
+    // Fix generic boolean serialization (Obsidian's stringifier sometimes uses Yes/No)
+    // We strictly want 'true'/'false' for boolean values to avoid ambiguity.
+    // This regex targets unquoted 'Yes' or 'No' immediately following a colon.
+    // If stringifyYaml returns true/false in the future, these regexes simply won't match.
+    yamlString = yamlString.replace(/: Yes$/gm, ': true');
+    yamlString = yamlString.replace(/: No$/gm, ': false');
     return `---\n${yamlString}\n---\n${body}`;
   }
 
