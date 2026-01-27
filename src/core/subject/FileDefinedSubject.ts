@@ -309,21 +309,46 @@ ${trailing_prompt}`;
 
   buildNote(info: SubjectInfoBase, context: { coverFileName?: string; llmModel?: string }): string {
     const { frontmatter, body } = this.getNoteParts(info, context);
-    // We strictly want 'true'/'false' for boolean values (YAML 1.2 standard), 
-    // but stringifyYaml (Obsidian) often uses 'Yes'/'No' (YAML 1.1).
-    // To allow for consistent output, we use a placeholder token for booleans
-    // and then replace them with literals in the output string.
-    for (const key in frontmatter) {
-       if (typeof frontmatter[key] === 'boolean') {
-           frontmatter[key] = frontmatter[key] ? "%%BOOL_TRUE%%" : "%%BOOL_FALSE%%";
+    
+    // Strategy: Extract boolean values to append manually as "true"/"false" literals,
+    // bypassing Obsidian's stringifyYaml which might output "Yes"/"No".
+    const booleanFields: Record<string, boolean> = {};
+
+    for (const prop of this.definition.properties) {
+       const key = prop.key;
+       let val = frontmatter[key];
+       
+       // Check if this property is supposed to be a boolean
+       const isBoolType = prop.type === 'boolean' || typeof prop.default === 'boolean';
+       
+       if (isBoolType && val !== undefined && val !== null) {
+          // Normalize to boolean if it's currently a string "Yes"/"No"/"true"/"false"
+          if (typeof val === 'string') {
+             const lower = val.toLowerCase();
+             if (lower === 'yes' || lower === 'true' || lower === 'on') val = true;
+             else if (lower === 'no' || lower === 'false' || lower === 'off') val = false;
+          }
+          
+          // If we successfully resolved a boolean, save it and remove from main frontmatter
+          if (typeof val === 'boolean') {
+             booleanFields[key] = val;
+             delete frontmatter[key];
+          }
+       } else if (typeof val === 'boolean') {
+           // Also catch implicit booleans not explicitly defined as such (rare but safer)
+           booleanFields[key] = val;
+           delete frontmatter[key];
        }
     }
 
     let yamlString = stringifyYaml(frontmatter).trim();
     
-    // Replace tokens with literal booleans (stripping any quotes added by stringifyYaml)
-    yamlString = yamlString.replace(/['"]?%%BOOL_TRUE%%['"]?/g, 'true');
-    yamlString = yamlString.replace(/['"]?%%BOOL_FALSE%%['"]?/g, 'false');
+    // Manually append the boolean fields
+    // This ensures they are always written as `key: true` or `key: false`
+    for (const key in booleanFields) {
+        if (yamlString.length > 0) yamlString += '\n';
+        yamlString += `${key}: ${booleanFields[key]}`;
+    }
 
     return `---\n${yamlString}\n---\n${body}`;
   }
