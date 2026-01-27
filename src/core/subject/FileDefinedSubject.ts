@@ -309,14 +309,22 @@ ${trailing_prompt}`;
 
   buildNote(info: SubjectInfoBase, context: { coverFileName?: string; llmModel?: string }): string {
     const { frontmatter, body } = this.getNoteParts(info, context);
+    // We strictly want 'true'/'false' for boolean values (YAML 1.2 standard), 
+    // but stringifyYaml (Obsidian) often uses 'Yes'/'No' (YAML 1.1).
+    // To allow for consistent output, we use a placeholder token for booleans
+    // and then replace them with literals in the output string.
+    for (const key in frontmatter) {
+       if (typeof frontmatter[key] === 'boolean') {
+           frontmatter[key] = frontmatter[key] ? "%%BOOL_TRUE%%" : "%%BOOL_FALSE%%";
+       }
+    }
+
     let yamlString = stringifyYaml(frontmatter).trim();
     
-    // Fix generic boolean serialization (Obsidian's stringifier sometimes uses Yes/No)
-    // We strictly want 'true'/'false' for boolean values to avoid ambiguity.
-    // This regex targets unquoted 'Yes' or 'No' immediately following a colon.
-    // If stringifyYaml returns true/false in the future, these regexes simply won't match.
-    yamlString = yamlString.replace(/: Yes$/gm, ': true');
-    yamlString = yamlString.replace(/: No$/gm, ': false');
+    // Replace tokens with literal booleans (stripping any quotes added by stringifyYaml)
+    yamlString = yamlString.replace(/['"]?%%BOOL_TRUE%%['"]?/g, 'true');
+    yamlString = yamlString.replace(/['"]?%%BOOL_FALSE%%['"]?/g, 'false');
+
     return `---\n${yamlString}\n---\n${body}`;
   }
 
