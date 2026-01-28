@@ -44,7 +44,9 @@ export const FAILED_GET_SUBJECT = "Failed to get subject data from AI.";
 
 export const COULD_NOT_CREATE_NOTE = "Error: Could not create the new note.";
 export const UNKNOWN_VENDOR_ERROR = "Error: Unknown LLM vendor selected.";
-// Removed unused AI_* parse/structure constants; errors are surfaced directly by AI clients.
+
+// Notice durations (milliseconds)
+export const ERROR_NOTICE_DURATION_MS = 7500; // Extended duration for error messages
 
 // Paths
 // Fallback directory if a SubjectDefinition does not specify its own directory.

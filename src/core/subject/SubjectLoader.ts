@@ -28,6 +28,7 @@
  * =========================================================================
  */
 import { Logger } from '../../utils/logger';
+import { ERROR_NOTICE_DURATION_MS } from '../../utils/constants';
 import { App, TFile, parseYaml, Notice } from 'obsidian';
 import { FileDefinedSubject } from './FileDefinedSubject';
 import { SubjectDefinition, SubjectInfoBase } from './types';
@@ -66,7 +67,7 @@ export async function parseSubjectDefinitionFile(app: App, filePath: string, sup
     if (validationErrors.length > 0) {
       const msg = `Invalid subject definition in ${filePath}:\n- ${validationErrors.join('\n- ')}`;
       Logger.error(`[NoteMakerAI] ${msg}`);
-      new Notice(`NoteMakerAI Error: ${msg}`, 5000); // 5s duration
+      new Notice(`NoteMakerAI Error: ${msg}`, ERROR_NOTICE_DURATION_MS);
       return null;
     }
 
@@ -137,17 +138,13 @@ function validateSubjectDefinition(def: any): string[] {
       }
     });
 
-    // Optional: Check if naming templates use valid keys
-    // (Regex to find {{key}})
+    // Validate that naming templates only reference defined property keys
     const templateVarRegex = /\{\{([^}]+)\}\}/g;
     const checkTemplate = (tmpl: string, loc: string) => {
         let match;
         while ((match = templateVarRegex.exec(tmpl)) !== null) {
             const key = match[1].trim();
-            // Allow system keys or property keys
             if (!keys.has(key) && key !== 'title' && key !== 'producer') {
-                 // Warn strictly? Or just log? The user requirement says "reporting errors".
-                 // A missing key in template leads to "undefined" in filename, which is bad.
                  errors.push(`Template '${loc}' uses unknown variable '{{${key}}}'. Must match a property key.`);
             }
         }
