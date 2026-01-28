@@ -104,7 +104,7 @@ export default class NoteMakerAI extends Plugin {
 
     // This function runs when your plugin is disabled
     onunload() {
-        // No cleanup needed for this simple version
+        // No cleanup needed.
     }
 
     /**
@@ -172,7 +172,7 @@ export default class NoteMakerAI extends Plugin {
         const definition = await SubjectLoader.parseSubjectDefinitionFile(this.app, config.subjectDefinitionPath, true);
         
         // Register subject regardless of definition load status (lazy validation)
-        const active: import('./core/subject').ActiveSubject = {
+        const activeSubject: import('./core/subject').ActiveSubject = {
             name: config.name,
             definition: definition || undefined,
             subjectDefinitionPath: config.subjectDefinitionPath,
@@ -180,15 +180,14 @@ export default class NoteMakerAI extends Plugin {
             photosDir: config.photosDir,
             llmLabel: config.llmLabel 
         };
-        this.subjectRegistry.registerSubject(active);
+        this.subjectRegistry.registerSubject(activeSubject);
         
-        // Only warn if we failed but only if not just partially typed (heuristic?)
-        // Actually, user wants deferred validation. So we log info instead of warn to reduce console noise during typing.
+        // Log at info level to avoid noise during settings typing
         if (!definition) {
             Logger.info(`[NoteMakerAI] Definition not loaded for ${config.name} at ${config.subjectDefinitionPath} (deferred).`);
         }
         
-        this.registerSubjectCommand(active);
+        this.registerSubjectCommand(activeSubject);
         if (render) this.renderRibbons();
     }
 
