@@ -55,9 +55,16 @@ export const FAILED_READ_IMAGE_NOTICE = (fileName: string) => `Failed to read th
 export const NOTE_CREATED_NOTICE = (fileName: string) => `Successfully created note: ${fileName}.md`;
 
 // Supported image extensions (used for file type detection)
-// Supported image extensions (used for file type detection)
 export const IMAGE_EXTENSIONS = ["jpg", "jpeg", "png"];
 
 // Default directories
 export const SUBJECT_DIR = 'NoteMakerAI';
 export const SUBJECT_PHOTOS_DIR = 'NoteMakerAI/photos';
+
+// Image dimension limits for processing
+export const NOTE_IMAGE_MAX_WIDTH = 750;
+export const NOTE_IMAGE_MAX_HEIGHT = 1000;
+export const AI_IMAGE_MAX_DIM = 512;
+
+// Maximum iterations for collision-safe file operations to prevent infinite loops
+export const MAX_COLLISION_ATTEMPTS = 100;

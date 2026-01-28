@@ -29,6 +29,7 @@
  */
 import { App, TFile, normalizePath } from 'obsidian';
 import { Logger as GlobalLogger } from '../../utils/logger';
+import { MAX_COLLISION_ATTEMPTS } from '../../utils/constants';
 import type { ReducedImageOrientation, RotationDirection } from '../../settings/schema';
 
 export type LogLevel = 'info' | 'error';
@@ -53,7 +54,16 @@ export interface PreparedImageOptions {
 /**
  * PreparedImage owns the lifecycle of turning a source image TFile into a note-ready
  * photo in subject/photos (JPEG as needed), while also providing a small AI-specific
- * base64 for model calls. It separates in-memory preparation from disk writes.
+ * base64 for model calls.
+ *
+ * Lifecycle:
+ *  1. `ensurePrepared()` - Load, measure, and optionally resize/rotate the image in memory
+ *  2. `writeFile()` - Persist the prepared image to the photos directory
+ *  3. `renameTo()` - Optionally rename to a canonical name derived from AI parsing
+ *  4. `deleteOriginal()` - Optionally delete the original source file
+ *
+ * This class separates in-memory preparation from disk writes, allowing callers
+ * to abort before committing any filesystem changes.
  */
 export class PreparedImage {
   private readonly app: App;
@@ -198,7 +208,7 @@ export class PreparedImage {
       
       // Try to move, handling collisions
       let counter = 1;
-      while (true) {
+      while (counter < MAX_COLLISION_ATTEMPTS) {
         // Strategy: photo.ext, photo 2.ext, photo 3.ext
         const suffix = counter === 1 ? '' : ` ${counter}`;
         const candidateName = `${baseName}${suffix}.${this.sourceFile.extension}`;
@@ -226,13 +236,14 @@ export class PreparedImage {
             throw error;
         }
       }
+      throw new Error(`Failed to move image after ${MAX_COLLISION_ATTEMPTS} collision attempts`);
     }
 
     // 2. RESIZE/WRITE Logic
     if (!this.preparedBuf) throw new Error('prepared-buffer-missing');
     
     let counter = 1;
-    while (true) {
+    while (counter < MAX_COLLISION_ATTEMPTS) {
         // Strategy: photo.jpg -> photo-resized.jpg -> photo-resized-2.jpg
         let candidateName = `${baseName}.jpg`;
         if (counter === 2) candidateName = `${baseName}-resized.jpg`;
@@ -262,6 +273,7 @@ export class PreparedImage {
             throw error;
         }
     }
+    throw new Error(`Failed to write image after ${MAX_COLLISION_ATTEMPTS} collision attempts`);
   }
 
   /**
@@ -277,10 +289,8 @@ export class PreparedImage {
         this.logError('Failed to delete original image.');
         GlobalLogger.error("Error deleting original image: " + String(e));
       }
-    } else if (!this.keepOriginal && !this.needsResize) {
-       // If we didn't resize, we likely moved the file, so we don't delete it (it's the same file).
-       // Logic in writeFile handles the move.
     }
+    // If we didn't resize, we moved the file (same file), so nothing to delete.
   }
 
   /**

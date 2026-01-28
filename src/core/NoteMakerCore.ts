@@ -70,9 +70,8 @@ import type {
 	SubjectPromptContext,
 	SubjectNoteSections,
 } from "./subject";
-import { SUBJECT_DIR } from "../utils/constants";
-
 import {
+	SUBJECT_DIR,
 	NO_ACTIVE_FILE_NOTICE,
 	NOT_IMAGE_NOTICE,
 	PROCESSING_NOTICE,
@@ -82,7 +81,12 @@ import {
 	COULD_NOT_CREATE_NOTE,
 	IMAGE_EXTENSIONS,
 	UNKNOWN_VENDOR_ERROR,
+	NOTE_IMAGE_MAX_WIDTH,
+	NOTE_IMAGE_MAX_HEIGHT,
+	AI_IMAGE_MAX_DIM,
+	MAX_COLLISION_ATTEMPTS,
 } from "../utils/constants";
+import { sanitizeNoteFilename, normalizeSectionSpacing } from "../utils/noteUtils";
 import { callOpenAIClient } from "./ai/openaiClient";
 import { callGeminiClient } from "./ai/geminiClient";
 import { callOpenRouterClient } from "./ai/openRouterClient";
@@ -97,13 +101,9 @@ type ExifData = import("./image/PreparedImage").ExifData;
 
 
 
-// Image dimension limits for processing
-const NOTE_IMAGE_MAX_WIDTH = 750;
-const NOTE_IMAGE_MAX_HEIGHT = 1000;
-const AI_IMAGE_MAX_DIM = 512;
+
 
 export class NoteMakerCore {
-	// private redoContext: RedoContext | null = null; // Removed in favor of RedoManager
 	private redoManager: RedoManager;
 
 	constructor(private plugin: NoteMakerAI, private registry: SubjectRegistry) {
@@ -453,17 +453,7 @@ export class NoteMakerCore {
 		return this.redoManager.processActiveMarkdown(file, progressModal, subject);
 	}
 
-	private sanitizeNoteFilename(name: string): string {
-		const raw = (name ?? "")
-			.replace(/[\\/:?*"<>|]/g, " ")
-			.replace(/\s+/g, " ")
-			.trim();
-		return raw.length > 0 ? raw : "NoteMakerAI Note";
-	}
 
-	private normalizeSectionSpacing(note: string): string {
-		return note.replace(/\n{3,}/g, "\n\n");
-	}
 
 	/**
 	 * Resolves output directories and optional LLM override for the current subject.
@@ -556,8 +546,7 @@ export class NoteMakerCore {
 		}
 
 		const { vendor, model, apiKey, label: llmLabel } = llmConfig;
-		// Fallback for unset keys if user has them in env (mostly for dev/testing)
-		const effectiveApiKey = apiKey; // || process.env[`${vendor.toUpperCase()}_API_KEY`] || "";
+		const effectiveApiKey = apiKey;
 
 		if (!effectiveApiKey) {
 			progressModal.error(
@@ -669,7 +658,7 @@ export class NoteMakerCore {
 		llmModel: string | undefined,
 		subject: import("./subject").ActiveSubject
 	): Promise<boolean> {
-		const fileName = this.sanitizeNoteFilename(
+		const fileName = sanitizeNoteFilename(
 			subject.definition!.getNoteFilename(info)
 		);
 		const { notesDir } = this.resolveSubjectDirsAndLlm(subject);
@@ -691,7 +680,7 @@ export class NoteMakerCore {
 		let basePath = normalizePath(`${dir}/${fileName}.md`);
 		let filePath = basePath;
 		let n = 2;
-		while (this.plugin.app.vault.getAbstractFileByPath(filePath)) {
+		while (this.plugin.app.vault.getAbstractFileByPath(filePath) && n < MAX_COLLISION_ATTEMPTS) {
 			filePath = normalizePath(`${dir}/${fileName} ${n}.md`);
 			n++;
 		}
@@ -707,7 +696,7 @@ export class NoteMakerCore {
 			exifData: exifData || undefined,
 			llmModel,
 		});
-		const content = this.normalizeSectionSpacing(baseContent);
+		const content = normalizeSectionSpacing(baseContent);
 
 		try {
 			const newFile = await this.plugin.app.vault.create(

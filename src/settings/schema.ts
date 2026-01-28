@@ -49,23 +49,35 @@ export interface FolderSettings {
   subjectDefinitionLocation?: string; // optional path to a markdown file defining subject instructions
 }
 
+/**
+ * Configuration for a single subject type (e.g., Books, Wines, Plants).
+ * Each subject has its own output directories and Subject Definition File.
+ */
 export interface SubjectConfigEntry {
+  /** Display name shown in UI and ribbon icons. */
   name: string;
+  /** Vault-relative path for generated notes. */
   notesDir: string;
+  /** Vault-relative path for photos associated with this subject. */
   photosDir: string;
+  /** Path to the Subject Definition File (markdown with YAML frontmatter). */
   subjectDefinitionPath: string;
+  /** Optional: override default LLM for this subject. */
   llmLabel?: string;
 }
 
 export type ReducedImageOrientation = 'maintain' | 'landscape' | 'portrait';
 export type RotationDirection = 'clockwise' | 'counter-clockwise';
 
+/**
+ * Settings for image processing during note creation.
+ */
 export interface ImageSettings {
   /** When a large image is resized, keep the original file instead of deleting it. */
   keepOriginalAfterResize: boolean;
-  /** Orientation behavior for the reduced image. */
+  /** Target orientation for the processed image (landscape, portrait, or maintain original). */
   orientation: ReducedImageOrientation;
-  /** Direction to rotate when orientation change is needed. */
+  /** Direction to rotate when orientation change is needed (clockwise or counter-clockwise). */
   rotationDirection: RotationDirection;
 }
 

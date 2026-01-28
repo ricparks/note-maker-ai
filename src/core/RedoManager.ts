@@ -43,13 +43,15 @@ import type {
 import type { ExifData } from "./image/PreparedImage";
 import { SubjectDefinition } from "./subject/types";
 import { confirm } from "../ui/confirm/ConfirmModal";
-import { IMAGE_EXTENSIONS } from "../utils/constants";
+import {
+	IMAGE_EXTENSIONS,
+	NOTE_IMAGE_MAX_WIDTH,
+	NOTE_IMAGE_MAX_HEIGHT,
+	AI_IMAGE_MAX_DIM,
+	MAX_COLLISION_ATTEMPTS,
+} from "../utils/constants";
+import { sanitizeNoteFilename, normalizeSectionSpacing } from "../utils/noteUtils";
 import { PreparedImage } from "./image/PreparedImage";
-
-// Image dimension limits for processing (Match Core constants)
-const NOTE_IMAGE_MAX_WIDTH = 750;
-const NOTE_IMAGE_MAX_HEIGHT = 1000;
-const AI_IMAGE_MAX_DIM = 512;
 
 const SECTION_HEADING_ALIASES: Record<string, string[]> = {
 	"redo instructions": ["ri"],
@@ -69,7 +71,14 @@ type RedoContext = {
 	rawSubject?: any;
 };
 
+/**
+ * RedoManager handles the "redo" workflow for regenerating AI content on existing notes.
+ * It extracts preserved sections (My Notes, Redo Instructions, Additional Media),
+ * fetches fresh AI data using the original photo, and rebuilds the note while
+ * preserving user-maintained content and touch_me_not properties.
+ */
 export class RedoManager {
+	/** Context retained between processActiveMarkdown and updateRedoNote */
 	private redoContext: RedoContext | null = null;
 
     constructor(private plugin: NoteMakerAI, private core: NoteMakerCore) {}
@@ -346,7 +355,7 @@ export class RedoManager {
 			}
 		}
 
-		updatedBody = this.normalizeSectionSpacing(updatedBody);
+		updatedBody = normalizeSectionSpacing(updatedBody);
 
 		try {
 			// Step 3: Build complete note content fresh (no preserving old frontmatter block)
@@ -657,15 +666,7 @@ export class RedoManager {
 		return btoa(binary);
 	}
 
-    // --- Section Helpers (Duplicated from Core for now to isolate Redo logic) ---
-
-    private sanitizeNoteFilename(name: string): string {
-		const raw = (name ?? "")
-			.replace(/[\\/:?*"<>|]/g, " ")
-			.replace(/\s+/g, " ")
-			.trim();
-		return raw.length > 0 ? raw : "NoteMakerAI Note";
-	}
+    // --- Section Helpers ---
 
 	private async renameRedoFileIfNeeded(
 		file: TFile,
@@ -673,7 +674,7 @@ export class RedoManager {
 		progressModal: ReturnType<typeof createProgressModal>,
 		subject: ActiveSubject
 	): Promise<TFile> {
-		const desiredBaseName = this.sanitizeNoteFilename(
+		const desiredBaseName = sanitizeNoteFilename(
 			subject.definition!.getNoteFilename(parsed)
 		);
 		if (desiredBaseName === file.basename) {
@@ -688,7 +689,7 @@ export class RedoManager {
 
 		let attempt = 0;
 		let targetPath = buildPath(attempt);
-		while (targetPath !== file.path) {
+		while (targetPath !== file.path && attempt < MAX_COLLISION_ATTEMPTS) {
 			const existing = this.plugin.app.vault.getAbstractFileByPath(targetPath);
 			if (!existing) break;
 			attempt += 1;
@@ -735,7 +736,7 @@ export class RedoManager {
 		let attempt = 0;
 		let targetPath = buildPath(attempt);
         // Avoid collision with EXISTING files (excluding itself)
-		while (targetPath !== photoFile.path) {
+		while (targetPath !== photoFile.path && attempt < MAX_COLLISION_ATTEMPTS) {
 			const existing = this.plugin.app.vault.getAbstractFileByPath(targetPath);
 			if (!existing) break;
 			attempt += 1;
@@ -870,9 +871,5 @@ export class RedoManager {
 
 	private escapeRegExp(value: string): string {
 		return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-	}
-
-    private normalizeSectionSpacing(note: string): string {
-		return note.replace(/\n{3,}/g, "\n\n");
 	}
 }
