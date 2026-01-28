@@ -28,7 +28,7 @@
  * =========================================================================
  */
 import { Logger } from "../utils/logger";
-import { TFile, App, Notice, MarkdownView, normalizePath } from "obsidian";
+import { TFile, App, Notice, MarkdownView, normalizePath, stringifyYaml } from "obsidian";
 import { createProgressModal } from "../ui/progress/ProgressModal";
 import type NoteMakerAI from "../main";
 import type { NoteMakerCore } from "./NoteMakerCore";
@@ -281,6 +281,24 @@ export class RedoManager {
 			exifData,
 		});
 
+		// --- Option B: Complete regeneration with selective preservation ---
+		
+		// Step 1: Get list of preserved (touch_me_not) fields
+		const preservedFields = new Set<string>();
+		if (typeof (subject.definition! as any).getPreservedFields === "function") {
+			const keys = (subject.definition! as any).getPreservedFields() as string[];
+			keys.forEach(k => preservedFields.add(k));
+		}
+
+		// Step 2: Extract preserved values from OLD frontmatter (noteData.properties)
+		const oldProperties = noteData.properties || {};
+		for (const key of preservedFields) {
+			if (oldProperties[key] !== undefined) {
+				// Override the new frontmatter with the preserved old value
+				frontmatter[key] = oldProperties[key];
+			}
+		}
+
 		const sections = { ...noteData.sections };
 		
 		// My Notes handling
@@ -331,44 +349,11 @@ export class RedoManager {
 		updatedBody = this.normalizeSectionSpacing(updatedBody);
 
 		try {
-			// Step 1: Write the content body. 
-			// We must preserve the existing frontmatter block string to avoid losing user-defined properties
-			// before we get a chance to run processFrontMatter.
-			const cache = this.plugin.app.metadataCache.getFileCache(file);
-			let finalContent = updatedBody;
-			
-			if (cache?.frontmatterPosition) {
-				const currentContent = await this.plugin.app.vault.read(file);
-				const fmEnd = cache.frontmatterPosition.end.offset;
-				// Extract --- ... --- block
-				const existingFrontmatterBlock = currentContent.substring(0, fmEnd);
-				finalContent = `${existingFrontmatterBlock}\n${updatedBody}`;
-			}
+			// Step 3: Build complete note content fresh (no preserving old frontmatter block)
+			// Use the same YAML serialization approach as FileDefinedSubject.buildNote
+			const finalContent = this.buildNoteContent(frontmatter, updatedBody, subject);
 			
 			await this.plugin.app.vault.modify(file, finalContent);
-			
-			// Step 2: Update Frontmatter atomically.
-			// This preserves any user custom properties that we aren't explicitly overwriting,
-			// while updating the ones we care about.
-			const preservedFields = new Set<string>();
-			if (typeof (subject.definition! as any).getPreservedFields === "function") {
-				const keys = (subject.definition! as any).getPreservedFields() as string[];
-				keys.forEach(k => preservedFields.add(k));
-			}
-
-			await this.plugin.app.fileManager.processFrontMatter(file, (fm) => {
-				// Inject the new properties
-				for (const [key, value] of Object.entries(frontmatter)) {
-					// Check if this field is protected from overwrite AND already exists
-					if (preservedFields.has(key) && fm[key] !== undefined) {
-						// Skip overwrite
-						continue;
-					}
-					fm[key] = value;
-				}
-				// Note: We do NOT delete keys that are missing in new 'frontmatter'.
-				// This preserves user-added keys.
-			});
 
 			progressModal.info("Updated note with regenerated content");
 			progressModal.done(true);
@@ -379,6 +364,67 @@ export class RedoManager {
 			progressModal.done(false);
 		}
 	}
+
+	/**
+	 * Builds complete note content with frontmatter and body.
+	 * Handles boolean serialization to ensure true/false (not Yes/No).
+	 */
+	private buildNoteContent(
+		frontmatter: Record<string, any>,
+		body: string,
+		subject: ActiveSubject
+	): string {
+		// Clone frontmatter to avoid mutating the original
+		const fm = { ...frontmatter };
+		
+		// Extract boolean values to append manually as "true"/"false" literals,
+		// bypassing Obsidian's stringifyYaml which might output "Yes"/"No".
+		const booleanFields: Record<string, boolean> = {};
+		const subjectDef = subject.definition! as any;
+		
+		// Get property definitions if available
+		const properties: Array<{ key: string; type?: string; default?: any }> = 
+			subjectDef.definition?.properties || [];
+		
+		for (const prop of properties) {
+			const key = prop.key;
+			let val = fm[key];
+			
+			// Check if this property is supposed to be a boolean
+			const isBoolType = prop.type === 'boolean' || typeof prop.default === 'boolean';
+			
+			if (isBoolType && val !== undefined && val !== null) {
+				// Normalize to boolean if it's currently a string "Yes"/"No"/"true"/"false"
+				if (typeof val === 'string') {
+					const lower = val.toLowerCase();
+					if (lower === 'yes' || lower === 'true' || lower === 'on') val = true;
+					else if (lower === 'no' || lower === 'false' || lower === 'off') val = false;
+				}
+				
+				// If we successfully resolved a boolean, save it and remove from main frontmatter
+				if (typeof val === 'boolean') {
+					booleanFields[key] = val;
+					delete fm[key];
+				}
+			} else if (typeof val === 'boolean') {
+				// Also catch implicit booleans not explicitly defined as such (rare but safer)
+				booleanFields[key] = val;
+				delete fm[key];
+			}
+		}
+
+		let yamlString = stringifyYaml(fm).trim();
+		
+		// Manually append the boolean fields
+		// This ensures they are always written as `key: true` or `key: false`
+		for (const key in booleanFields) {
+			if (yamlString.length > 0) yamlString += '\n';
+			yamlString += `${key}: ${booleanFields[key]}`;
+		}
+
+		return `---\n${yamlString}\n---\n${body}`;
+	}
+
 
     private async processAdditionalMedia(
 		noteData: SubjectNoteData,
