@@ -495,7 +495,6 @@ export class RedoManager {
 			}
 
 			const prepared = new PreparedImage(this.plugin.app, sourceFile, {
-				subjectDir: notesDir,
 				photosDir: photosDir,
 				maxW: NOTE_IMAGE_MAX_WIDTH,
 				maxH: NOTE_IMAGE_MAX_HEIGHT,
@@ -503,7 +502,7 @@ export class RedoManager {
 				keepOriginal: !!this.plugin.settings.image?.keepOriginalAfterResize,
 				orientation: this.plugin.settings.image?.orientation,
 				rotationDirection: this.plugin.settings.image?.rotationDirection,
-				logger: {
+				progressReporter: {
 					info: (m) => progressModal.info(`[Media] ${m}`),
 					error: (m) => progressModal.error(`[Media] ${m}`),
 				},

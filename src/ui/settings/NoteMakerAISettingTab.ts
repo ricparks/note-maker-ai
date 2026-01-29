@@ -76,16 +76,10 @@ export class NoteMakerAISettingTab extends PluginSettingTab {
 		const { containerEl } = this;
 		containerEl.empty();
 
-		// Top-level plugin name heading removed per guidelines
-
-
-		// VERSION (read-only)
 		new Setting(containerEl)
 			.setName("Version")
 			.setDesc(this.plugin.manifest.version);
 
-		// SUBJECTS
-		// SUBJECTS
 		new Setting(containerEl).setName("Subjects").setHeading();
 		const subjectsWrap = containerEl.createEl("div", { cls: "notemaker-subjects-list" });
 
@@ -122,7 +116,6 @@ export class NoteMakerAISettingTab extends PluginSettingTab {
 						.onChange(async (val) => {
 							subject.name = val;
 							await this.plugin.saveSettings();
-							// Debounce ribbon update? For now just save.
 							// Header update
 							const h4 = header.querySelector("h4");
 							if (h4) h4.textContent = val || "Untitled Subject";

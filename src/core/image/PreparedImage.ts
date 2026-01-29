@@ -28,27 +28,25 @@
  * =========================================================================
  */
 import { App, TFile, normalizePath } from 'obsidian';
-import { Logger as GlobalLogger } from '../../utils/logger';
+import { Logger } from '../../utils/logger';
 import { MAX_COLLISION_ATTEMPTS } from '../../utils/constants';
 import type { ReducedImageOrientation, RotationDirection } from '../../settings/schema';
 
-export type LogLevel = 'info' | 'error';
-export interface Logger {
+/** Callback interface for reporting progress to the UI (e.g., progress modal) */
+export interface ProgressReporter {
   info(msg: string): void;
   error(msg: string): void;
 }
 
 export interface PreparedImageOptions {
-  subjectDir: string;
-  photosSubdir?: string; // defaults to "photos"
-  photosDir?: string;    // absolute photos directory (overrides subjectDir/photosSubdir when provided)
+  photosDir: string;
   maxW?: number; // default 750
   maxH?: number; // default 1000
   aiMax?: number; // default 512
   keepOriginal?: boolean; // default false
   orientation?: ReducedImageOrientation;
   rotationDirection?: RotationDirection;
-  logger?: Logger;
+  progressReporter?: ProgressReporter;
 }
 
 /**
@@ -68,11 +66,9 @@ export interface PreparedImageOptions {
 export class PreparedImage {
   private readonly app: App;
   private sourceFile: TFile;
-  private logger?: Logger;
+  private progressReporter?: ProgressReporter;
 
-  private subjectDir: string;
-  private photosSubdir: string;
-  private photosDir?: string;
+  private photosDir: string;
   private maxW: number;
   private maxH: number;
   private aiMax: number;
@@ -100,10 +96,8 @@ export class PreparedImage {
   constructor(app: App, file: TFile, opts: PreparedImageOptions) {
     this.app = app;
     this.sourceFile = file;
-    this.logger = opts.logger;
-    this.subjectDir = opts.subjectDir;
-    this.photosSubdir = opts.photosSubdir || 'photos';
-  this.photosDir = opts.photosDir;
+    this.progressReporter = opts.progressReporter;
+    this.photosDir = opts.photosDir;
     this.maxW = opts.maxW ?? 750;
     this.maxH = opts.maxH ?? 1000;
     this.aiMax = opts.aiMax ?? 512;
@@ -120,10 +114,10 @@ export class PreparedImage {
    */
   async ensurePrepared(): Promise<boolean> {
     try {
-      this.logInfo('Reading image bytes...');
+      this.reportProgress('Reading image bytes...');
       this.originalBuf = await this.app.vault.readBinary(this.sourceFile);
     } catch {
-      this.logError(`Failed to read the image file: ${this.sourceFile.name}.`);
+      this.reportError(`Failed to read the image file: ${this.sourceFile.name}.`);
       return false;
     }
 
@@ -135,10 +129,10 @@ export class PreparedImage {
     }
     const { w, h } = dims;
     if (!w || !h) {
-      this.logError('Could not read image dimensions.');
+      this.reportError('Could not read image dimensions.');
       return false;
     }
-    this.logInfo(`Image dimensions: ${w}×${h}`);
+    this.reportProgress(`Image dimensions: ${w}×${h}`);
 
     // Check for explicit rotation requirement
     let effectiveW = w;
@@ -164,7 +158,7 @@ export class PreparedImage {
       return true;
     }
 
-    this.logInfo(`Resizing/Rotating image to fit within ${this.maxW}×${this.maxH}...`);
+    this.reportProgress(`Resizing/Rotating image to fit within ${this.maxW}×${this.maxH}...`);
     try {
       this.preparedBuf = await this.resizeToJpeg(
         this.originalBuf, 
@@ -177,8 +171,8 @@ export class PreparedImage {
       this.noteBase64 = this.toBase64(this.preparedBuf);
       return true;
     } catch (e) {
-      this.logError('Failed to resize image.');
-      GlobalLogger.error("Error resizing image: " + String(e));
+      this.reportError('Failed to resize image.');
+      Logger.error("Error resizing image: " + String(e));
       return false;
     }
   }
@@ -190,26 +184,28 @@ export class PreparedImage {
    * Optionally deletes the original depending on keepOriginal setting.
    */
   async writeFile(): Promise<TFile> {
-    const photosDir = normalizePath(this.photosDir || `${this.subjectDir}/${this.photosSubdir}`);
+    const photosDir = normalizePath(this.photosDir);
     await this.ensureFolder(photosDir);
 
+    // Extract filename without extension for collision-safe naming
     const baseName = this.sourceFile.name.replace(/\.[^.]+$/, '');
 
     if (!this.needsResize) {
-      // 1. MOVE Logic
+      // PATH 1: MOVE - Image is already within size limits
+      // Just relocate the original file to photosDir, preserving its format/extension
       const isInPhotos = this.sourceFile.path.startsWith(`${photosDir}/`);
       if (isInPhotos) {
-        this.logInfo('Image already within size limits and in photos directory.');
+        this.reportProgress('Image already within size limits and in photos directory.');
         this.persistedFile = this.sourceFile;
         return this.persistedFile;
       }
 
-      this.logInfo('Moving image into photos directory.');
+      this.reportProgress('Moving image into photos directory.');
       
       // Try to move, handling collisions
       let counter = 1;
       while (counter < MAX_COLLISION_ATTEMPTS) {
-        // Strategy: photo.ext, photo 2.ext, photo 3.ext
+        // Collision-safe naming: first try original name, then append " 2", " 3", etc.
         const suffix = counter === 1 ? '' : ` ${counter}`;
         const candidateName = `${baseName}${suffix}.${this.sourceFile.extension}`;
         const candidatePath = normalizePath(`${photosDir}/${candidateName}`);
@@ -229,7 +225,7 @@ export class PreparedImage {
             return this.persistedFile;
         } catch (error: any) {
             if (error.message && error.message.includes('File already exists')) {
-                this.logInfo(`Collision moving to ${candidateName}, retrying...`);
+                this.reportProgress(`Collision moving to ${candidateName}, retrying...`);
                 counter++;
                 continue;
             }
@@ -239,12 +235,16 @@ export class PreparedImage {
       throw new Error(`Failed to move image after ${MAX_COLLISION_ATTEMPTS} collision attempts`);
     }
 
-    // 2. RESIZE/WRITE Logic
+    // PATH 2: RESIZE/WRITE - Image was resized in memory, write as new JPEG
+    // Uses different naming pattern ("-resized" suffix) to distinguish from moved originals
+
+
+    // Defensive guard: ensurePrepared() must be called before writeFile() when resizing
     if (!this.preparedBuf) throw new Error('prepared-buffer-missing');
     
     let counter = 1;
     while (counter < MAX_COLLISION_ATTEMPTS) {
-        // Strategy: photo.jpg -> photo-resized.jpg -> photo-resized-2.jpg
+        // Collision-safe naming for resized images: photo.jpg, then photo-resized.jpg, photo-resized-2.jpg, etc.
         let candidateName = `${baseName}.jpg`;
         if (counter === 2) candidateName = `${baseName}-resized.jpg`;
         else if (counter > 2) candidateName = `${baseName}-resized-${counter - 1}.jpg`;
@@ -257,7 +257,7 @@ export class PreparedImage {
             continue;
         }
 
-        this.logInfo(`Writing JPEG: ${candidateName} (${this.preparedWidth}×${this.preparedHeight}).`);
+        this.reportProgress(`Writing JPEG: ${candidateName} (${this.preparedWidth}×${this.preparedHeight}).`);
         
         try {
              // @ts-ignore createBinary exists at runtime
@@ -266,7 +266,7 @@ export class PreparedImage {
             return this.persistedFile;
         } catch (error: any) {
              if (error.message && error.message.includes('File already exists')) {
-                this.logInfo(`Collision writing ${candidateName}, retrying...`);
+                this.reportProgress(`Collision writing ${candidateName}, retrying...`);
                 counter++;
                 continue;
             }
@@ -284,10 +284,10 @@ export class PreparedImage {
     if (!this.keepOriginal && this.needsResize) {
       try {
         await this.app.vault.delete(this.sourceFile);
-        this.logInfo('Deleted original image.');
+        this.reportProgress('Deleted original image.');
       } catch (e) {
-        this.logError('Failed to delete original image.');
-        GlobalLogger.error("Error deleting original image: " + String(e));
+        this.reportError('Failed to delete original image.');
+        Logger.error("Error deleting original image: " + String(e));
       }
     }
     // If we didn't resize, we moved the file (same file), so nothing to delete.
@@ -323,7 +323,7 @@ export class PreparedImage {
    */
   async renameTo(baseNoExt: string): Promise<TFile> {
     if (!this.persistedFile) throw new Error('rename requires writeFile() first');
-    const photosDir = normalizePath(`${this.subjectDir}/${this.photosSubdir}`);
+    const photosDir = normalizePath(this.photosDir);
     const safeBase = baseNoExt.replace(/[^a-z0-9_\-]/gi, '_').replace(/_+/g, '_').toLowerCase();
     let candidate = `${safeBase}.jpg`;
     let n = 2;
@@ -333,7 +333,7 @@ export class PreparedImage {
     }
     const desiredPath = normalizePath(`${photosDir}/${candidate}`);
     if (this.persistedFile.path === desiredPath) return this.persistedFile;
-    this.logInfo(`Renaming photo to ${candidate}...`);
+    this.reportProgress(`Renaming photo to ${candidate}...`);
     await this.app.fileManager.renameFile(this.persistedFile, desiredPath);
     const renamed = this.app.vault.getAbstractFileByPath(desiredPath) as TFile | null;
     if (renamed) this.persistedFile = renamed;
@@ -395,17 +395,17 @@ export class PreparedImage {
       this.exifData = exif;
       return exif;
     } catch (e) {
-      this.logError('Failed to parse EXIF metadata.');
-      GlobalLogger.error("Error parsing EXIF: " + String(e));
+      this.reportError('Failed to parse EXIF metadata.');
+      Logger.error("Error parsing EXIF: " + String(e));
       this.exifData = null;
       return null;
     }
   }
 
-  // Internal helpers (ported from the previous ImageProcessor)
+  // Internal helpers
 
-  private logInfo(msg: string) { this.logger?.info(msg); }
-  private logError(msg: string) { this.logger?.error(msg); }
+  private reportProgress(msg: string) { this.progressReporter?.info(msg); }
+  private reportError(msg: string) { this.progressReporter?.error(msg); }
 
   private async measure(buffer: ArrayBuffer): Promise<{ w: number; h: number }> {
     return await this.withObjectUrl(buffer, (url) => new Promise((resolve, reject) => {
@@ -446,9 +446,9 @@ export class PreparedImage {
     if (!blob) throw new Error('toBlob-null');
     const buf = await blob.arrayBuffer();
     const bytes = new Uint8Array(buf);
-    // SOI check
+    // Validate JPEG header (Start of Image marker: 0xFF 0xD8)
     if (!(bytes[0] === 0xFF && bytes[1] === 0xD8)) throw new Error('jpeg-soi-missing');
-    // EOI fallback
+    // Validate JPEG footer (End of Image marker: 0xFF 0xD9); fallback to toDataURL if truncated
     if (!(bytes[bytes.length - 2] === 0xFF && bytes[bytes.length - 1] === 0xD9)) {
       const fallback = canvas.toDataURL('image/jpeg', quality);
       const part = fallback.split(',')[1];

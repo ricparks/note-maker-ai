@@ -153,6 +153,15 @@ export class NoteMakerCore {
 		
 		if (!(await this.ensureSubjectReady(subject))) return;
 
+		// Validate required directories are configured
+		if (!subject.notesDir?.trim()) {
+			new (require("obsidian").Notice)(`Notes folder not configured for "${subject.name}". Please set it in Settings > NoteMaker AI.`);
+			return;
+		}
+		if (!subject.photosDir?.trim()) {
+			new (require("obsidian").Notice)(`Photos folder not configured for "${subject.name}". Please set it in Settings > NoteMaker AI.`);
+			return;
+		}
 
 		// 1. Try to detect multiple selection from File Explorer (Internal API heuristic)
 		const selection = this.getExplorerSelection();
@@ -282,7 +291,6 @@ export class NoteMakerCore {
 		const { notesDir, photosDir, llmLabelOverride } =
 			this.resolveSubjectDirsAndLlm(subject);
 		const preparedImage = new PreparedImage(this.plugin.app, file, {
-			subjectDir: notesDir,
 			photosDir: photosDir,
 			maxW: NOTE_IMAGE_MAX_WIDTH,
 			maxH: NOTE_IMAGE_MAX_HEIGHT,
@@ -290,7 +298,7 @@ export class NoteMakerCore {
 			keepOriginal: !!this.plugin.settings.image?.keepOriginalAfterResize,
 			orientation: this.plugin.settings.image?.orientation,
 			rotationDirection: this.plugin.settings.image?.rotationDirection,
-			logger: {
+			progressReporter: {
 				info: (m) => progressModal.info(m),
 				error: (m) => progressModal.error(m),
 			},
@@ -473,10 +481,10 @@ export class NoteMakerCore {
 
 		// Fallback for legacy calls (should not happen in proper usage)
 		const folders = this.plugin.settings.folders;
-		const defaultFolder = this.firstSubject?.definition?.directory || SUBJECT_DIR; // fallback to active subject if generic
+		const defaultFolder = this.firstSubject?.definition?.directory || SUBJECT_DIR;
 
 		const notesDir = folders?.notes?.trim() || defaultFolder;
-		const photosDir = normalizePath(folders?.photos?.trim() || `${notesDir}/photos`);
+		const photosDir = folders?.photos?.trim() || "";
 		const llmLabelOverride = folders?.llmLabel?.trim() || undefined;
 
 		return { notesDir, photosDir, llmLabelOverride };

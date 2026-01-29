@@ -37,7 +37,8 @@ import { SubjectDefinitionFile } from './file_schema';
  */
 export class FileDefinedSubject implements SubjectDefinition<SubjectInfoBase> {
   public id: string;
-  public prompt: string; // Base prompt, though we largely use getPrompt
+  /** Cached base prompt built in constructor; accessed via getPrompt() which adds context */
+  public prompt: string;
   public ribbonIcon: string;
   public ribbonTitle: string;
   public validateSubject: boolean;
@@ -66,7 +67,7 @@ export class FileDefinedSubject implements SubjectDefinition<SubjectInfoBase> {
     const { lead_prompt, properties, sections, trailing_prompt } = this.definition;
 
     // prompt properties: STRICTLY exclude ones that have a default. 
-    // If a default is set, we use it locally. We do NEVER ask the AI for it, even if an instruction is present.
+    // If a default is set, we use it locally. We never ask the AI for it, even if an instruction is present.
     const promptProperties = properties.filter(p => p.default === undefined && p.instruction);
 
     const propsList = promptProperties.map(p => {

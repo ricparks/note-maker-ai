@@ -48,9 +48,6 @@ export const UNKNOWN_VENDOR_ERROR = "Error: Unknown LLM vendor selected.";
 // Notice durations (milliseconds)
 export const ERROR_NOTICE_DURATION_MS = 7500; // Extended duration for error messages
 
-// Paths
-// Fallback directory if a SubjectDefinition does not specify its own directory.
-
 // Small helper templates for dynamic messages
 export const PROCESSING_NOTICE = (fileName: string) => `Processing ${fileName}...`;
 export const FAILED_READ_IMAGE_NOTICE = (fileName: string) => `Failed to read the image file: ${fileName}.`;

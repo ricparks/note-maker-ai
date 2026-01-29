@@ -27,7 +27,6 @@
  *
  * =========================================================================
  */
-import { Plugin } from 'obsidian';
 import type NoteMakerAI from '../main';
 import type { ActiveSubject } from '../core/subject';
 
