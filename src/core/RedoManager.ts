@@ -28,7 +28,7 @@
  * =========================================================================
  */
 import { Logger } from "../utils/logger";
-import { TFile, App, Notice, MarkdownView, normalizePath, stringifyYaml } from "obsidian";
+import { TFile, normalizePath, stringifyYaml } from "obsidian";
 import { createProgressModal } from "../ui/progress/ProgressModal";
 import type NoteMakerAI from "../main";
 import type { NoteMakerCore } from "./NoteMakerCore";
@@ -41,7 +41,7 @@ import type {
 	SubjectNoteSections
 } from "./subject";
 import type { ExifData } from "./image/PreparedImage";
-import { SubjectDefinition } from "./subject/types";
+
 import { confirm } from "../ui/confirm/ConfirmModal";
 import {
 	IMAGE_EXTENSIONS,
@@ -81,9 +81,9 @@ export class RedoManager {
 	/** Context retained between processActiveMarkdown and updateRedoNote */
 	private redoContext: RedoContext | null = null;
 
-    constructor(private plugin: NoteMakerAI, private core: NoteMakerCore) {}
+	constructor(private plugin: NoteMakerAI, private core: NoteMakerCore) {}
 
-    public async processActiveMarkdown(
+	public async processActiveMarkdown(
 		file: TFile,
 		progressModal: ReturnType<typeof createProgressModal>,
 		subject: ActiveSubject
@@ -91,20 +91,9 @@ export class RedoManager {
 		this.redoContext = null;
 		progressModal.info("Redoing image");
 		
-		const subjectAny = subject.definition! as unknown as {
-			parseExistingNote?: (
-				note: SubjectExistingNoteContext
-			) => SubjectNoteData | Promise<SubjectNoteData>;
-		};
-		if (typeof subjectAny.parseExistingNote !== "function") {
-			progressModal.error("Redo is not available for this subject yet.");
-			progressModal.done(false);
-			return;
-		}
-
 		const content = await this.plugin.app.vault.read(file);
 		const frontmatter = this.plugin.app.metadataCache.getFileCache(file)?.frontmatter;
-		const noteData = await subjectAny.parseExistingNote({
+		const noteData = await subject.definition!.parseExistingNote({
 			file,
 			content,
 			frontmatter,
@@ -140,16 +129,13 @@ export class RedoManager {
 			promptContext.exifData = exifFromNote;
 		}
 		
-        const { notesDir, llmLabelOverride } = this.core.resolveSubjectDirsAndLlm(subject);
+		const { notesDir, llmLabelOverride } = this.core.resolveSubjectDirsAndLlm(subject);
 		promptContext.app = this.plugin.app;
 
 		promptContext.notesDir = notesDir;
 		promptContext.logInfo = (m) => progressModal.info(m);
 
-		const prompt =
-			typeof (subject.definition! as any).getPrompt === "function"
-				? await (subject.definition! as any).getPrompt(promptContext)
-				: subject.definition!.prompt;
+		const prompt = await subject.definition!.getPrompt(promptContext);
 		
 		// DEBUG logging for prompt generation
 		Logger.info(`[NoteMakerAI] Processing active markdown: ${file.name}`);
@@ -197,7 +183,7 @@ export class RedoManager {
 		}
 		
 		progressModal.info("Analyzing original photo with AI...");
-        
+		
 		const resultCtx = await this.core.fetchSubjectJson(
 			photoBase64,
 			progressModal,
@@ -234,7 +220,7 @@ export class RedoManager {
 		await this.updateRedoNote(parsed, progressModal, subject);
 	}
 
-    private parseRedoSubject(
+	private parseRedoSubject(
 		raw: any,
 		progressModal: ReturnType<typeof createProgressModal>,
 		subject: ActiveSubject
@@ -249,7 +235,7 @@ export class RedoManager {
 		}
 	}
 
-    private async updateRedoNote(
+	private async updateRedoNote(
 		parsed: SubjectInfoBase,
 		progressModal: ReturnType<typeof createProgressModal>,
 		subject: ActiveSubject
@@ -261,7 +247,7 @@ export class RedoManager {
 		}
 		const { noteData, photoFile, exifData } = this.redoContext;
 		
-        let file = await this.renameRedoFileIfNeeded(
+		let file = await this.renameRedoFileIfNeeded(
 			this.redoContext.file,
 			parsed,
 			progressModal,
@@ -269,7 +255,7 @@ export class RedoManager {
 		);
 		this.redoContext.file = file;
 		
-        // Rename photo if the subject data has changed (e.g. Artist/Album name update)
+		// Rename photo if the subject data has changed (e.g. Artist/Album name update)
 		const updatedPhoto = await this.renameRedoPhotoIfNeeded(
 			photoFile,
 			parsed,
@@ -290,14 +276,12 @@ export class RedoManager {
 			exifData,
 		});
 
-		// --- Option B: Complete regeneration with selective preservation ---
+		// Complete regeneration with selective preservation 
 		
 		// Step 1: Get list of preserved (touch_me_not) fields
 		const preservedFields = new Set<string>();
-		if (typeof (subject.definition! as any).getPreservedFields === "function") {
-			const keys = (subject.definition! as any).getPreservedFields() as string[];
-			keys.forEach(k => preservedFields.add(k));
-		}
+		const keys = subject.definition!.getPreservedFields();
+		keys.forEach(k => preservedFields.add(k));
 
 		// Step 2: Extract preserved values from OLD frontmatter (noteData.properties)
 		const oldProperties = noteData.properties || {};
@@ -311,11 +295,9 @@ export class RedoManager {
 		const sections = { ...noteData.sections };
 		
 		// My Notes handling
-		const myNotesHeadings = typeof (subject.definition! as any).getMyNotesSectionHeadings === "function" 
-			? (subject.definition! as any).getMyNotesSectionHeadings() as string[] 
-			: [];
+		const myNotesHeadings = subject.definition!.getMyNotesSectionHeadings();
 
-		const promptKey = this.findSectionKey(sections, "Redo Instructions");
+		const riSectionKey = this.findSectionKey(sections, "Redo Instructions");
 
 		// We merge SECTIONS into the BODY logic
 		let updatedBody = body;
@@ -328,22 +310,15 @@ export class RedoManager {
 			}
 		}
 
-		if (promptKey) {
-			const promptBody = sections[promptKey] ?? "";
-			const exists = this.sectionExists(updatedBody, promptKey) || this.sectionExists(updatedBody, "Redo Instructions");
+		if (riSectionKey) {
+			const riSectionBody = sections[riSectionKey] ?? "";
+			const exists = this.sectionExists(updatedBody, riSectionKey) || this.sectionExists(updatedBody, "Redo Instructions");
 			if (exists) {
-				updatedBody = this.replaceSectionVariants(updatedBody, [promptKey, "Redo Instructions"], promptBody);
+				updatedBody = this.replaceSectionVariants(updatedBody, [riSectionKey, "Redo Instructions"], riSectionBody);
 			} else {
-				// If promptKey doesn't exist, insert it. Priority: after the first MyNotes section, or just at end?
-				// Logic: Insert after the LAST detected MyNotes section, or fall back to "My Notes" alias
-				
-				let afterCandidates = ["My Notes"];
-				if (myNotesHeadings.length > 0) {
-					afterCandidates = myNotesHeadings.map(h => this.normalizeHeading(h));
-				}
-				
-				// We need original casing for exact matches in insertSectionAfter, assume myNotesHeadings are correct.
-				updatedBody = this.insertSectionAfter(updatedBody, myNotesHeadings.length > 0 ? myNotesHeadings : ["My Notes"], promptKey, promptBody);
+				// Insert RI section after the My Notes section(s)
+				const insertAfter = myNotesHeadings.length > 0 ? myNotesHeadings : ["My Notes"];
+				updatedBody = this.insertSectionAfter(updatedBody, insertAfter, riSectionKey, riSectionBody);
 			}
 		}
 
@@ -389,11 +364,9 @@ export class RedoManager {
 		// Extract boolean values to append manually as "true"/"false" literals,
 		// bypassing Obsidian's stringifyYaml which might output "Yes"/"No".
 		const booleanFields: Record<string, boolean> = {};
-		const subjectDef = subject.definition! as any;
 		
-		// Get property definitions if available
-		const properties: Array<{ key: string; type?: string; default?: any }> = 
-			subjectDef.definition?.properties || [];
+		// Get property definitions for type checking
+		const properties = subject.definition!.getPropertyDefinitions();
 		
 		for (const prop of properties) {
 			const key = prop.key;
@@ -435,7 +408,7 @@ export class RedoManager {
 	}
 
 
-    private async processAdditionalMedia(
+	private async processAdditionalMedia(
 		noteData: SubjectNoteData,
 		parsed: SubjectInfoBase,
 		progressModal: ReturnType<typeof createProgressModal>,
@@ -472,10 +445,8 @@ export class RedoManager {
 			newText: string;
 		}[] = [];
 
-		const { notesDir, photosDir } = this.core.resolveSubjectDirsAndLlm(subject);
-		const baseNameCandidate = (subject.definition! as any).getPhotoBasename
-			? (subject.definition! as any).getPhotoBasename(parsed)
-			: "image";
+		const { photosDir } = this.core.resolveSubjectDirsAndLlm(subject);
+		const baseNameCandidate = subject.definition!.getPhotoBasename(parsed);
 
 		for (const match of matches) {
 			const prefix = match[1];
@@ -548,14 +519,14 @@ export class RedoManager {
 
 		noteData.sections[mediaKey] = newSectionText;
 	}
-    
-    // --- Utils & Helpers ---
+	
+	// --- Utils & Helpers ---
 
-    private sanitizeId(name: string): string {
+	private sanitizeId(name: string): string {
 		return name.toLowerCase().replace(/[^a-z0-9]+/g, '_');
 	}
 
-    private extractExifFromProperties(
+	private extractExifFromProperties(
 		properties?: Record<string, any>
 	): ExifData | undefined {
 		if (!properties) return undefined;
@@ -592,7 +563,7 @@ export class RedoManager {
 		return Object.keys(exif).length > 0 ? exif : undefined;
 	}
 
-    private resolveRedoPhoto(
+	private resolveRedoPhoto(
 		noteData: SubjectNoteData,
 		sourceFile: TFile,
 		markdown: string
@@ -649,7 +620,7 @@ export class RedoManager {
 		return text;
 	}
 
-    private async readFileAsBase64(file: TFile): Promise<string> {
+	private async readFileAsBase64(file: TFile): Promise<string> {
 		const data = await this.plugin.app.vault.readBinary(file);
 		return this.arrayBufferToBase64(data);
 	}
@@ -665,7 +636,7 @@ export class RedoManager {
 		return btoa(binary);
 	}
 
-    // --- Section Helpers ---
+	// --- Section Helpers ---
 
 	private async renameRedoFileIfNeeded(
 		file: TFile,
@@ -712,21 +683,15 @@ export class RedoManager {
 		progressModal: ReturnType<typeof createProgressModal>,
 		subject: ActiveSubject
 	): Promise<TFile> {
-        // If subject definition doesn't support getPhotoBasename, we can't determine the correct name
-		if (typeof (subject.definition! as any).getPhotoBasename !== "function") {
-			return photoFile;
-		}
-
-		const desiredBaseName = (subject.definition! as any).getPhotoBasename(parsed);
-        // Current name without extension
-        const currentBaseName = photoFile.basename;
+		const desiredBaseName = subject.definition!.getPhotoBasename(parsed);
+		const currentBaseName = photoFile.basename;
 
 		if (desiredBaseName === currentBaseName) {
 			return photoFile;
 		}
 
 		const dir = photoFile.parent ? photoFile.parent.path : "";
-        const ext = photoFile.extension;
+		const ext = photoFile.extension;
 		const buildPath = (attempt: number) => {
 			const base = attempt === 0 ? desiredBaseName : `${desiredBaseName}_${attempt + 1}`;
 			return normalizePath(dir ? `${dir}/${base}.${ext}` : `${base}.${ext}`);
@@ -734,7 +699,7 @@ export class RedoManager {
 
 		let attempt = 0;
 		let targetPath = buildPath(attempt);
-        // Avoid collision with EXISTING files (excluding itself)
+		// Avoid collision with EXISTING files (excluding itself)
 		while (targetPath !== photoFile.path && attempt < MAX_COLLISION_ATTEMPTS) {
 			const existing = this.plugin.app.vault.getAbstractFileByPath(targetPath);
 			if (!existing) break;
@@ -752,7 +717,7 @@ export class RedoManager {
 		return updated instanceof TFile ? updated : photoFile;
 	}
 
-    private findSectionKey(
+	private findSectionKey(
 		sections: SubjectNoteSections,
 		heading: string
 	): string | undefined {

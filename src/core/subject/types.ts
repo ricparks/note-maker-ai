@@ -83,8 +83,8 @@ export interface SubjectDefinition<T extends SubjectInfoBase = SubjectInfoBase> 
   prompt: string;             // AI prompt to send
   validateSubject?: boolean;  // Whether to check correlation between image and subject
   validationThreshold?: number; // Optional verification threshold override
-  /** Optional: Build a prompt dynamically based on context (e.g., EXIF or parsed note data). If provided, takes precedence over 'prompt'. */
-  getPrompt?(context: SubjectPromptContext): string | Promise<string>;
+  /** Build a prompt dynamically based on context (e.g., EXIF or parsed note data). */
+  getPrompt(context: SubjectPromptContext): string | Promise<string>;
   getNoteFilename(info: T): string;  // derive filename (without extension)
   /**
    * Build the complete markdown content for a note, including YAML frontmatter and sections.
@@ -120,18 +120,22 @@ export interface SubjectDefinition<T extends SubjectInfoBase = SubjectInfoBase> 
   parse(aiJson: any, context?: { originalImage?: TFile }): T;      // map AI JSON to typed structure with fallbacks
   // Optional per-subject note directory (relative inside vault). If omitted, fallback constant used.
   directory?: string;
-  /** Optional hook to compute a canonical base photo file name (without extension). */
-  getPhotoBasename?(info: T, context?: { exifData?: import('../image/PreparedImage').ExifData }): string;
+  /** Compute a canonical base photo file name (without extension). */
+  getPhotoBasename(info: T, context?: { exifData?: import('../image/PreparedImage').ExifData }): string;
   /** Optional ribbon icon id for this subject (lucide icon id). */
   ribbonIcon?: string;
   /** Optional ribbon title for this subject. */
   ribbonTitle?: string;
-  /** Optional hook used during redo to parse an existing markdown note. */
-  parseExistingNote?(note: SubjectExistingNoteContext): SubjectNoteData | Promise<SubjectNoteData>;
-  /** Optional hook to validate parsed data and return a list of warning messages. */
-  validateParsedData?(info: T): string[];
-  /** Optional hook to return a list of property keys that should not be overwritten during Redo. */
-  getPreservedFields?(): string[];
+  /** Parse an existing markdown note for redo support. */
+  parseExistingNote(note: SubjectExistingNoteContext): SubjectNoteData | Promise<SubjectNoteData>;
+  /** Validate parsed data and return a list of warning messages. */
+  validateParsedData(info: T): string[];
+  /** Return a list of property keys that should not be overwritten during Redo. */
+  getPreservedFields(): string[];
+  /** Return section headings marked as user-editable ({{my_notes}}) for preservation during redo. */
+  getMyNotesSectionHeadings(): string[];
+  /** Return property definitions with type info for proper serialization (e.g., boolean handling). */
+  getPropertyDefinitions(): Array<{ key: string; type?: string; default?: any }>;
 }
 
 /**
