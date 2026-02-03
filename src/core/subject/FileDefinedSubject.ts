@@ -111,7 +111,7 @@ ${sectionsList}
 Return your response as JSON matching this exact structure:
 ${exampleJson}
 
-${trailing_prompt}`;
+${trailing_prompt || ''}`;
 
     if (this.validateSubject) {
       base += `\n\nAlso return a field 'subject_match' (boolean) and 'confidence' (0.0 to 1.0) indicating if this image matches the expected subject. If subject_match is false, provide a short 'reason' string.`;

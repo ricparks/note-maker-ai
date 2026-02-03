@@ -95,8 +95,7 @@ function validateSubjectDefinition(def: any): string[] {
     'naming',
     'properties',
     'sections',
-    'lead_prompt',
-    'trailing_prompt'
+    'lead_prompt'
   ];
 
   for (const field of requiredFields) {
