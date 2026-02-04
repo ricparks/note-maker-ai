@@ -30,7 +30,6 @@ properties:
       touch_me_not: true
     - key: "is_reviewed"
       default: false
-      touch_me_not: true
     - key: "needs_washing"
       default: false
       touch_me_not: true

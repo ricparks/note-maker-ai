@@ -1,4 +1,6 @@
 subject_name: "Wine"
+id: "wine"
+sdf_version: "1.0"
 icon: "wine"
 
 # Enable verification to ensure we are processing wine bottles/labels
@@ -22,10 +24,16 @@ properties:
       instruction: "Region of origin (Appellation)"
     - key: "price"
       instruction: "Retail price if visible on label or found online (include currency symbol)"
-    - key: "storage_space"
-      instruction: "Leave this field empty string"
+      touch_me_not: true
+    - key: "storage_spaces"
+      default: "" 
+      touch_me_not: true
+    - key: "is_reviewed"
+      default: false
 
 sections:
+    - heading: "My Notes"
+      instruction: "{{my_notes}}"
     - heading: "Vendor's Notes"
       instruction: "Description and marketing copy from the winemaker/vendor."
     - heading: "Critic's Notes"
@@ -33,4 +41,4 @@ sections:
 
 lead_prompt: "You are an expert sommelier and wine collector. Analyze the provided wine bottle/label image and infer structured metadata. Search online if needed to fill in details like region or price."
 
-trailing_prompt: "If a field is unknown, use an empty string. The 'storage_space' property must always be empty. Do not hallucinate. Also include lightweight classification guard fields to help verify the chosen subject without extra requests: - subject_match: boolean — does this image look like a wine bottle or label? - predicted_category: one of \"wine\", \"book\", \"travel\", or \"unknown\" - confidence: number 0..1 — confidence in predicted_category - reason: short explanation (one sentence max) Return ONLY valid JSON."
+trailing_prompt: "If a field is unknown, use an empty string. The 'storage_space' property must always be empty. Make sure to understand what is written on the label and to fill in the JSON with what you read on the label. If you can't find all the necessary information for a property look on the web. Do an image search if you must. Try hard to get this right. If you get it wrong, the user might lose a lot of money."
