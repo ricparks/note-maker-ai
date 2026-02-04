@@ -43,7 +43,12 @@ import { SubjectDefinitionFile } from './file_schema';
 export async function parseSubjectDefinitionFile(app: App, filePath: string, suppressLog = false): Promise<SubjectDefinition<SubjectInfoBase> | null> {
   if (!filePath) return null;
 
-  const file = app.vault.getAbstractFileByPath(filePath);
+  let file = app.vault.getAbstractFileByPath(filePath);
+
+  // If not found and doesn't end in .md, try appending .md
+  if (!file && !filePath.toLowerCase().endsWith('.md')) {
+    file = app.vault.getAbstractFileByPath(filePath + '.md');
+  }
   
   if (!file || !(file instanceof TFile)) {
     if (!suppressLog) Logger.warn(`[NoteMakerAI] No subject definition file found at ${filePath}.`);

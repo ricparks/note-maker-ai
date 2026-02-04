@@ -37,7 +37,7 @@ Let's walk through creation of a new subject, Recipe.
 
     sections:
       - heading: "Instructions"
-        instruction: "Step-by-step cooking instructions."
+        instruction: "Step-by-step cooking instructions. Be sure that each step is on a new line."
       - heading: "Chef's Notes"
         instruction: "Culinary tips or flavor profile description."
       - heading: "My Variations"
