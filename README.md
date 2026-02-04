@@ -40,7 +40,7 @@ For users who want to test the latest unreleased changes:
 ## Quick Start Information
 
 1.  **Configure AI**: Go to **Settings** > **NoteMakerAI** and enter your API key for your preferred provider (e.g., OpenAI or Gemini) and specify the model to use. Note that you can enter multiple AI vendors and their keys. You might want to use different models for different subjects.
-2.  **Choose a Subject**: We provide three starter subjects in the `examples/` directory: [Books](examples/BookSubjectDefinition.md), [Albums](examples/AlbumSubjectDefinition.md), and [Wine](examples/WineSubjectDefinition.md). Copy the Subject Definition File (SDF) for your desired subject into your vault to use it as-is, or use it as a template to define your own custom collection. 
+2.  **Choose a Subject**: We provide three starter subjects in the `examples/` directory: [Books](examples/BSD.md), [Albums](examples/ASD.md), and [Wine](examples/WSD.md). Copy the Subject Definition File (SDF) for your desired subject into your vault to use it as-is, or use it as a template to define your own custom collection. 
 3. **Configure Settings**: You'll need to specify the location of the subject definition file in your vault as well as the target directory for the newly created notes and reduced images.
 4.  **Capture**: Drag and drop an image (JPG/PNG) into your Obsidian vault.
 5.  **Process**: Open the image note and click the **NoteMakerAI** ribbon icon for your subject on the left sidebar. You can also select multiple images from the files view for batch processing. 
