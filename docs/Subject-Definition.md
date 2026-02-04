@@ -15,10 +15,9 @@ Let's walk through creation of a new subject, Recipe.
 
 1.  Create a folder in your vault (e.g., `NoteMaker Templates`).
 2.  Create a new Markdown file inside it named `RecipeSubject.md`.
-3.  Paste the following content into it:
+3.  Paste the following content into it (be sure to surround the content with `---` at the top and bottom of the file):
 
     ```yaml
-    ---
     subject_name: "Recipe"
     icon: "chef-hat"
 
@@ -45,7 +44,6 @@ Let's walk through creation of a new subject, Recipe.
 
     lead_prompt: "You are an expert chef. Analyze the food in this image..."
     trailing_prompt: "Do not include any Markdown formatting in text fields. If exact quantities are not visible, estimate reasonable amounts based on standard portions."
-    ---
     ```
 
 4.  Go to **Settings > NoteMaker AI** and set the **Subject Definition File** path to `NoteMaker Templates/RecipeSubject.md` and set folders for the locations of the generated notes and images.
