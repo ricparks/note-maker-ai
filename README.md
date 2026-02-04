@@ -2,15 +2,13 @@
 
 **Turn any photo into a structured Obsidian note using AI.**
 
-**Turn any photo into a structured Obsidian note using AI.**
-
-NoteMakerAI helps you manage collections—like Books, Wine, or Albums—by converting photos into rich, structured notes. Define your own "Subjects" using simple YAML files (see the [Subject Definition Guide](docs/Subject-Definition.md)), and let the AI extract metadata, write summaries, and organize your vault.
+NoteMakerAI helps you manage collections—like Books, Wine, or Albums—by converting photos into rich, structured notes. Define your own "Subjects" using simple YAML files (see the [Subject Definition Guide](docs/Subject-Definition.md)), and let your selected LLM extract metadata, write summaries, and organize your vault.
 
 Features include batch processing, iterative "Redo" with custom instructions, and smart image optimization. **Note**: You must provide your own API key (BYOK) for providers like OpenAI or Gemini. 
 
 ## Features
 
-*   **AI-Powered Analysis**: Sends the image to your AI provider to identify titles, authors, descriptions, vintages, and more depending on the subject.
+*   **AI-Powered Analysis**: Sends the image—along with its **location, date, and camera metadata**—to your AI provider to identify titles, authors, descriptions, vintages, and more.
 *   **Flexible Subjects**: Comes with built-in support for Books, Albums, and Wine but is designed to be easily extensible for any collection (Coins, Plants, etc.).
 *   **Supports Major AI Providers**: Including OpenAI, Google Gemini, Anthropic, and OpenRouter.
 *   **Seamless Integration**: Works entirely within Obsidian. Snap a photo, drop it in your vault, and click the button.

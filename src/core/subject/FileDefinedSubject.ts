@@ -126,6 +126,37 @@ ${trailing_prompt || ''}`;
   async getPrompt(context: SubjectPromptContext): Promise<string> {
     let finalPrompt = this.prompt;
 
+    // Inject EXIF Metadata if available
+    if (context.exifData) {
+      const e = context.exifData;
+      const parts: string[] = [];
+
+      if (e.dateTimeOriginal) parts.push(`Date Taken: ${e.dateTimeOriginal}`);
+      
+      // Location
+      if (e.latitude && e.longitude) {
+        parts.push(`GPS Location: ${e.latitude.toFixed(6)}, ${e.longitude.toFixed(6)}`);
+        if (e.altitude) parts.push(`Altitude: ${e.altitude.toFixed(1)}m`);
+      }
+
+      // Camera Gear
+      const camera = [e.make, e.model].filter(Boolean).join(' ');
+      if (camera) parts.push(`Camera: ${camera}`);
+      if (e.lensModel) parts.push(`Lens: ${e.lensModel}`);
+
+      // Settings
+      const settings: string[] = [];
+      if (e.focalLength) settings.push(`${e.focalLength}mm`);
+      if (e.fNumber) settings.push(`f/${e.fNumber}`);
+      if (e.exposureTime) settings.push(`${e.exposureTime}s`);
+      if (e.iso) settings.push(`ISO ${e.iso}`);
+      if (settings.length > 0) parts.push(`Settings: ${settings.join(' ')}`);
+
+      if (parts.length > 0) {
+        finalPrompt += `\n\n[Context Data from Image Metadata]\n${parts.join('\n')}\nWe have provided this metadata to help you be more accurate. You can use it to derive location, time of day, or date context.`;
+      }
+    }
+
     // Handle Redo / Prompt Additions
     if (context.noteData) {
       const sections = context.noteData.sections;

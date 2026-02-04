@@ -3,7 +3,6 @@ id: "wine"
 sdf_version: "1.0"
 icon: "wine"
 
-# Enable verification to ensure we are processing wine bottles/labels
 validate_subject: true
 validation_threshold: 0.8
 

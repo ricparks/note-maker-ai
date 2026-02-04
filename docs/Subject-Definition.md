@@ -9,19 +9,23 @@ You can create unlimited custom subjects (e.g., *Wine*, *Plants*, *Receipts*, *I
 ### Subject Definition File Example 
 
 Let's walk through creation of a new subject, Recipe. 
+### Subject Definition File Example
+
+Let's walk through creation of a new subject, Recipe.
 
 1.  Create a folder in your vault (e.g., `NoteMaker Templates`).
 2.  Create a new Markdown file inside it named `RecipeSubject.md`.
 3.  Paste the following content into it:
 
     ```yaml
+    ---
     subject_name: "Recipe"
     icon: "chef-hat"
-    
+
     naming:
       note: "{{title}}"
       photo: "{{title}}_photo"
-    
+
     properties:
       - key: "title"
         instruction: "Name of the dish"
@@ -30,7 +34,7 @@ Let's walk through creation of a new subject, Recipe.
         type: list
       - key: "prep_time"
         instruction: "Preparation time in minutes"
-    
+
     sections:
       - heading: "Instructions"
         instruction: "Step-by-step cooking instructions."
@@ -38,13 +42,15 @@ Let's walk through creation of a new subject, Recipe.
         instruction: "Culinary tips or flavor profile description."
       - heading: "My Variations"
         instruction: "{{my_notes}}"
-    
+
     lead_prompt: "You are an expert chef. Analyze the food in this image..."
     trailing_prompt: "Do not include any Markdown formatting in text fields. If exact quantities are not visible, estimate reasonable amounts based on standard portions."
+    ---
     ```
 
 4.  Go to **Settings > NoteMaker AI** and set the **Subject Definition File** path to `NoteMaker Templates/RecipeSubject.md` and set folders for the locations of the generated notes and images.
-5.  Click the chef hat ribbon icon or use the command **NoteMaker AI: Create Recipe note from image**.
+5.  Take a picture of a recipe, put it anywhere in the vault, and make it the active file by viewing it.
+6.  Click the chef hat ribbon icon or use the command **NoteMaker AI: Create Recipe note from image**.
 
 ---
 
@@ -139,6 +145,16 @@ The composition utilizes...
     *   *Example:* "You are an expert botanist. Identify this plant..."
 *   **`trailing_prompt`**: (Result defaults to empty string) Sets final formatting rules.
     *   *Example:* "If a field is unknown, use an empty string. If you do not have reasonable confidence about idenfying the plant, call it 'Unidentified' and leave all property values blank."
+
+### Image Metadata (EXIF)
+
+NoteMaker automatically extracts available EXIF metadata (Date, GPS Location, Camera Model, etc.) and appends it to the AI prompt as context. 
+
+You do not need special placeholders to use this. simply refer to it in your natural language instructions:
+
+*   "Extract the date of the event. Use the photo's metadata date if avaiable."
+*   "Identify the city and country based on the GPS coordinates provided."
+*   "Note the technical camera settings if they are present in the context."
 ---
 
 ### Placeholders
