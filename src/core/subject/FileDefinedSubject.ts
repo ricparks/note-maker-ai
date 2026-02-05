@@ -127,7 +127,9 @@ ${trailing_prompt || ''}`;
     let finalPrompt = this.prompt;
 
     // Inject EXIF Metadata if available
+    console.log(`[FileDefinedSubject.getPrompt] context.exifData present: ${!!context.exifData}`);
     if (context.exifData) {
+      console.log(`[FileDefinedSubject.getPrompt] EXIF data received:`, context.exifData);
       const e = context.exifData;
       const parts: string[] = [];
 
@@ -152,9 +154,16 @@ ${trailing_prompt || ''}`;
       if (e.iso) settings.push(`ISO ${e.iso}`);
       if (settings.length > 0) parts.push(`Settings: ${settings.join(' ')}`);
 
+      console.log(`[FileDefinedSubject.getPrompt] EXIF parts to inject:`, parts);
       if (parts.length > 0) {
-        finalPrompt += `\n\n[Context Data from Image Metadata]\n${parts.join('\n')}\nWe have provided this metadata to help you be more accurate. You can use it to derive location, time of day, or date context.`;
+        const exifBlock = `\n\n[Context Data from Image Metadata]\n${parts.join('\n')}\nWe have provided this metadata to help you be more accurate. You can use it to derive location, time of day, or date context.`;
+        console.log(`[FileDefinedSubject.getPrompt] Appending EXIF block to prompt`);
+        finalPrompt += exifBlock;
+      } else {
+        console.log(`[FileDefinedSubject.getPrompt] No EXIF parts generated (all fields empty/undefined)`);
       }
+    } else {
+      console.log(`[FileDefinedSubject.getPrompt] No EXIF data in context`);
     }
 
     // Handle Redo / Prompt Additions

@@ -309,7 +309,9 @@ export class NoteMakerCore {
 		let exifData: ExifData | null = null;
 		try {
 			exifData = await preparedImage.getExifData();
-		} catch {
+			Logger.info(`[NoteMakerAI] EXIF extraction result: ${exifData ? JSON.stringify(exifData) : 'null (no EXIF found)'}`);
+		} catch (exifError) {
+			Logger.warn(`[NoteMakerAI] EXIF extraction failed:`, exifError);
 			exifData = null;
 		}
 
@@ -497,8 +499,10 @@ export class NoteMakerCore {
 			prompt = promptOverride;
 		} else {
 			const context: SubjectPromptContext = {};
+			Logger.info(`[NoteMakerAI] fetchSubjectJson received exifData: ${exifData ? 'present' : 'undefined/null'}`);
 			if (exifData) {
 				context.exifData = exifData;
+				Logger.info(`[NoteMakerAI] Added EXIF to prompt context: ${JSON.stringify(exifData)}`);
 			}
 			const { notesDir } = this.resolveSubjectDirsAndLlm(subject);
 			context.app = this.plugin.app;

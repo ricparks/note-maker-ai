@@ -6,6 +6,16 @@ NoteMakerAI helps you manage collections—like Books, Wine, or Albums—by conv
 
 Features include batch processing, iterative "Redo" with custom instructions, and smart image optimization. **Note**: You must provide your own API key (BYOK) for providers like OpenAI or Gemini. 
 
+## Table of Contents
+
+- [Features](#features)
+- [Installation](#installation)
+- [Quick Start Information](#quick-start-information)
+- [The Redo Feature](#the-redo-feature)
+- [Additional Media](#additional-media)
+- [Subject Definition Files](#subject-definition-files)
+- [License](#license)
+
 ## Features
 
 *   **AI-Powered Analysis**: Sends the image—along with its **location, date, and camera metadata**—to your AI provider to identify titles, authors, descriptions, vintages, and more.
@@ -78,7 +88,7 @@ The plugin will:
 
 
 
-### Subject Definition Files
+## Subject Definition Files
 
 NoteMakerAI is built on the concept of **Subject Definition Files (SDFs)**. These are Markdown files that contain YAML to tell the AI what to look for and how to format the result.
 

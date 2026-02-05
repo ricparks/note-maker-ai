@@ -15,7 +15,7 @@ Let's walk through creation of a new subject, Recipe.
 
 1.  Create a folder in your vault (e.g., `NoteMaker Templates`).
 2.  Create a new Markdown file inside it named `RecipeSubject.md`.
-3.  Paste the following content into it (be sure to surround the content with ''' at the top and bottom of the file):
+3.  Paste the following content into it (be sure to surround the content with ``` at the top and bottom of the file):
 
     ```yaml
     subject_name: "Recipe"
@@ -36,7 +36,7 @@ Let's walk through creation of a new subject, Recipe.
 
     sections:
       - heading: "Instructions"
-        instruction: "Step-by-step cooking instructions. Be sure that each step is on a new line."
+        instruction: "Step-by-step cooking instructions. Be sure each step is on a new line."
       - heading: "Chef's Notes"
         instruction: "Culinary tips or flavor profile description."
       - heading: "My Variations"
