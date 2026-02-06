@@ -5,7 +5,28 @@ You can create unlimited custom subjects (e.g., *Wine*, *Plants*, *Receipts*, *I
 
 ---
 
-### Subject Definition File Example
+## Table of Contents
+
+- [Subject Definition File Example](#subject-definition-file-example)
+- [Configuration Guide](#configuration-guide)
+  - [Basic Metadata](#basic-metadata)
+  - [Naming & File Paths](#naming--file-paths)
+  - [Properties (Frontmatter)](#properties-frontmatter)
+  - [Sections (Content Body)](#sections-content-body)
+  - [Prompts](#prompts)
+- [Placeholders](#placeholders)
+- [User Notes & Redo Preservation](#user-notes--redo-preservation)
+  - [Property Preservation](#property-preservation)
+- [Image Metadata (EXIF)](#image-metadata-exif)
+- [Advanced Features](#advanced-features)
+  - [Custom IDs & Renaming](#custom-ids--renaming)
+  - [Protection (touch_me_not)](#protection-touch_me_not)
+  - [Automatic Validation](#automatic-validation)
+  - [Versioning](#versioning)
+
+---
+
+## Subject Definition File Example
 
 Let's walk through creation of a new subject, Recipe.
 
@@ -50,7 +71,7 @@ Let's walk through creation of a new subject, Recipe.
 
 ---
 
-### Configuration Guide
+## Configuration Guide
 
 A Subject Definition File is a standard Markdown file. 
 
@@ -63,7 +84,7 @@ A Subject Definition File is a standard Markdown file.
 
 NoteMaker AI looks for this ` ```yaml ` block in the body of the note.
 
-#### 1. Basic Metadata
+### Basic Metadata
 
 | Field | Description |
 | :--- | :--- |
@@ -71,7 +92,7 @@ NoteMaker AI looks for this ` ```yaml ` block in the body of the note.
 | `icon` | **Required.** The name of any [Lucide icon](https://lucide.dev/icons) (e.g., `book`, `camera`, `zap`). |
 | `id` | **Recommended.** A unique, stable identifier (e.g., `recipe`). See [Advanced Features](#custom-ids--renaming) below. |
 
-#### 2. Naming & File Paths
+### Naming & File Paths
 
 Control how your notes and images are named using the `naming` block. You can use placeholders for any property you defined.
 
@@ -84,7 +105,7 @@ naming:
 *   **`naming.note`**: The filename of the generated Markdown file.
 *   **`naming.photo`**: The filename (not including extension) for the saved image.
 
-#### 3. Properties (Frontmatter)
+### Properties (Frontmatter)
 
 The `properties` list defines what data the AI should extract for the note's frontmatter.
 
@@ -111,7 +132,7 @@ properties:
 *   **`type`**: Set to `list`, `sequence`, or `array` to force the AI to return a list of strings.
 *   **`touch_me_not`**: Set to `true` to protect this property from being overwritten when you Redo the note (useful for manual user ratings or flags).
 
-#### 4. Sections (Content Body)
+### Sections (Content Body)
 
 The `sections` list defines the headings and text content of the note body.
 
@@ -141,7 +162,7 @@ The composition utilizes...
 ```
 
 
-#### 5. Prompts
+### Prompts
 
 *   **`lead_prompt`**: Sets the role and context.
     *   *Example:* "You are an expert botanist. Identify this plant..."
@@ -150,7 +171,7 @@ The composition utilizes...
 
 
 
-### Placeholders
+## Placeholders
 
 You can use these placeholders in `naming` patterns, `default` property values, and section `instruction` fields.
 
@@ -158,11 +179,11 @@ You can use these placeholders in `naming` patterns, `default` property values, 
 | :--- | :--- | :--- |
 | `{{original_image}}` | Default | Resolves to a wiki-link of the original image (e.g., `[[IMG_1234.jpg]]`). |
 | `{{sdf_version}}` | Default | Resolves to the version string defined in your file. |
-| `{{my_notes}}` | **Section Instruction** | designate the section as **User Notes**. Content in this section is preserved during Redo and excluded from AI generation. |
+| `{{my_notes}}` | **Section Instruction** | Designates the section as **User Notes**. Content in this section is preserved during Redo and excluded from AI generation. |
 
 ---
 
-### User Notes & Redo Preservation
+## User Notes & Redo Preservation
 
 By default, "Redo" overwrites the entire note content based on the AI's new output. To allow users to keep their own notes within a Subject note, use the `{{my_notes}}` placeholder.
 
@@ -175,13 +196,13 @@ sections:
 *   **Preserved**: Whatever the user writes in "My Findings" remains after a Redo.
 *   **Safe**: The AI will not attempt to generate text for this section.
 
-#### Property Preservation
+### Property Preservation
 
 You can also preserve specific Frontmatter properties (like manual ratings or tags) by adding `touch_me_not: true` to the property definition. See the [Properties](#3-properties-frontmatter) section for details.
 
 ---
 
-### Image Metadata (EXIF)
+## Image Metadata (EXIF)
 
 NoteMaker automatically extracts available EXIF metadata (Date, GPS Location, Camera Model, etc.) and appends it to the AI prompt as context. 
 
@@ -193,9 +214,9 @@ You do not need special placeholders to use this. simply refer to it in your nat
 
 ---
 
-### Advanced Features
+## Advanced Features
 
-#### Custom IDs & Renaming
+### Custom IDs & Renaming
 By default, NoteMaker uses the `subject_name` as an internal ID. If you rename the subject (e.g., "Recipe" -> "Food"), NoteMaker might treat it as a new subject, breaking the "Redo" history for old notes.
 
 **Best Practice:** Explicitly set an `id`.
@@ -205,7 +226,7 @@ subject_name: "Food"
 id: "recipe" # Keeps the internal link to old 'Recipe' notes
 ```
 
-#### Protection (touch_me_not)
+### Protection (touch_me_not)
 If you manually edit a property after generating a note, you don't want a "Redo" command to overwrite your work. Add `touch_me_not: true` to protect specific fields.
 
 ```yaml
@@ -215,7 +236,7 @@ properties:
     touch_me_not: true # If I change this manually, Redo won't revert it.
 ```
 
-#### Automatic Validation
+### Automatic Validation
 Prevent NoteMaker from generating a note if the image doesn't match the subject.
 
 ```yaml
@@ -223,9 +244,9 @@ validate_subject: true
 validation_threshold: 0.8
 ```
 
-You **must** add details to your `trailing_prompt` ONLY if you want to customize the validation logic. NoteMaker automatically appends the request for `subject_match` and `confidence` when this feature is enabled.
+You can add details to your `trailing_prompt` if you want to customize the validation logic. NoteMaker automatically appends the request for `subject_match` and `confidence` when this feature is enabled.
 
-#### Versioning
+### Versioning
 You can version your definition file to track changes in your notes.
 
 1.  Add `sdf_version` to the top level of your YAML.
@@ -233,7 +254,6 @@ You can version your definition file to track changes in your notes.
 
 ```yaml
 subject_name: "Recipe"
-sdf_version: "1.2"  <-- Define version here
 
 properties:
   - key: "template_version"
