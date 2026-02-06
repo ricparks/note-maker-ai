@@ -1,5 +1,8 @@
-```
+```yaml
+
 subject_name: "Books" 
+id: "book" 
+sdf_version: "1.0"
 icon: "book-open" 
 
 naming:

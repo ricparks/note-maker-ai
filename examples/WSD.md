@@ -1,3 +1,5 @@
+```yaml
+
 subject_name: "Wine"
 id: "wine"
 sdf_version: "1.0"
@@ -41,3 +43,4 @@ sections:
 lead_prompt: "You are an expert sommelier and wine collector. Analyze the provided wine bottle/label image and infer structured metadata. Search online if needed to fill in details like region or price."
 
 trailing_prompt: "If a field is unknown, use an empty string. The 'storage_space' property must always be empty. Make sure to understand what is written on the label and to fill in the JSON with what you read on the label. If you can't find all the necessary information for a property look on the web. Do an image search if you must. Try hard to get this right. If you get it wrong, the user might lose a lot of money."
+```

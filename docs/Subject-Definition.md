@@ -5,10 +5,6 @@ You can create unlimited custom subjects (e.g., *Wine*, *Plants*, *Receipts*, *I
 
 ---
 
-
-### Subject Definition File Example 
-
-Let's walk through creation of a new subject, Recipe. 
 ### Subject Definition File Example
 
 Let's walk through creation of a new subject, Recipe.
@@ -54,10 +50,16 @@ Let's walk through creation of a new subject, Recipe.
 
 ### Configuration Guide
 
-A Subject Definition File is a standard Markdown file. NoteMaker AI reads the **YAML Frontmatter** (the block between `---` lines or inside a `yaml` code block) to configure the subject.
+A Subject Definition File is a standard Markdown file. 
 
-> [!TIP]
-> You can place the configuration inside a ` ```yaml ` code block if you prefer to view it as code in Obsidian.
+> [!WARNING]
+> **Do not use standard YAML Frontmatter** (the block between `---` at the top of the file).
+> 
+> Obsidian's "Properties" UI will try to manage this block. If you use the Properties UI, **Obsidian will strip all your comments**, which are essential for documenting your subject instructions.
+>
+> Instead, always place your configuration inside a ` ```yaml ` code block.
+
+NoteMaker AI looks for this ` ```yaml ` block in the body of the note.
 
 #### 1. Basic Metadata
 
@@ -87,7 +89,7 @@ The `properties` list defines what data the AI should extract for the note's fro
 ```yaml
 properties:
   - key: "author"
-    instruction: "Who wrote this book?"
+    instruction: "Who wrote this book? Format the name of the primary author as 'first name, last name'."
   
   - key: "tags"
     default: ["book", "reading"] # Auto-inserted, AI is not asked for this

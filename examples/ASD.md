@@ -1,6 +1,6 @@
-```
+```yaml
 subject_name: "Album"
-id: album
+id: "album"
 sdf_version: "1.0"
 icon: "disc"
 

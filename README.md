@@ -14,6 +14,7 @@ Features include batch processing, iterative "Redo" with custom instructions, an
 - [The Redo Feature](#the-redo-feature)
 - [Additional Media](#additional-media)
 - [Subject Definition Files](#subject-definition-files)
+- [Subject Creation Kit](#subject-creation-kit)
 - [License](#license)
 
 ## Features
@@ -93,6 +94,19 @@ The plugin will:
 NoteMakerAI is built on the concept of **Subject Definition Files (SDFs)**. These are Markdown files that contain YAML to tell the AI what to look for and how to format the result.
 
 For a comprehensive guide, see the [Subject Definition Guide](docs/Subject-Definition.md).
+
+
+## Subject Creation Kit
+
+We have created the **Subject Creation Kit** to help you easily build your own custom subjects. This kit includes a chatbot-ready prompt file that guides you through the process of defining your subject's properties and sections.
+
+Download the kit here: [Subject-Maker-Kit.zip](https://github.com/ricparks/note-maker-ai/raw/main/docs/Subject-Maker-Kit.zip)
+
+The zip file includes:
+*   `Subject-Maker-Kit.md`: The chatbot prompt file.
+*   `Subject-Definition-Guide.md`: Reference documentation.
+*   `README.md`: Instructions for using the kit.
+*   Three sample Subject Definition Files (SDFs).
 
 
 ## License
