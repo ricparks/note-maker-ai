@@ -10,11 +10,11 @@ Features include batch processing, iterative "Redo" with custom instructions, an
 
 - [Features](#features)
 - [Installation](#installation)
-- [Quick Start Information](#quick-start-information)
+- [Quick Start](#quick-start-information)
 - [The Redo Feature](#the-redo-feature)
 - [Additional Media](#additional-media)
 - [Subject Definition Files](#subject-definition-files)
-- [Subject Creation Kit](#subject-creation-kit)
+- [Subject Creation Kit for Chatbots](#subject-creation-kit-for-chatbots)
 - [License](#license)
 
 ## Features
@@ -36,7 +36,7 @@ Since this plugin is currently in Beta, the easiest way to install it is using t
 1.  Install **BRAT** from the Obsidian Community Plugins list.
 2.  Open the BRAT settings.
 3.  Click **Add Beta plugin**.
-4.  Paste the URL of this repository: `https://github.com/ricparks/note-maker-ai` (or your fork's URL).
+4.  Paste the URL of this repository: `https://github.com/ricparks/note-maker-ai`.
 5.  Click **Add Plugin**.
 6.  Enable **NoteMakerAI** in your Community Plugins list.
 
@@ -64,7 +64,7 @@ The **Redo** feature allows you to refine or regenerate a note without losing yo
 1.  **Open an existing note** created by NoteMakerAI.
 2.  (Optional) Add a `#### Redo Instructions` heading (or `#### RI`) and type instructions for the AI (e.g., "Write the summary in the style of Hunter S. Thompson").
 3.  **Click the Ribbon Icon** for the subject (e.g., the Book icon) or run the "Create Note" command again while the note is active.
-4.  **Confirm**: The plugin will detect the existing note and ask if you want to **Redo** it.
+4.  **Processing**: The plugin will regenerate the note. (You will only be asked to confirm if there is a subject mismatch).
 
 ### What gets preserved?
 *   **My Notes**: Sections defined as {{my_notes}}  are never touched. This is where you should write your personal reviews or thoughts.
@@ -86,6 +86,9 @@ The plugin will:
 *   **Move** them to the subject's designated photo folder.
 *   **Update the links** in your note to point to the new, clean files.
 
+> [!NOTE] 
+> At present, additional media is optimized and organized but **not** sent to the AI for analysis. Multi-image analysis is a possible future feature.
+
 
 
 
@@ -96,19 +99,22 @@ NoteMakerAI is built on the concept of **Subject Definition Files (SDFs)**. Thes
 For a comprehensive guide, see the [Subject Definition Guide](docs/Subject-Definition.md).
 
 
-## Subject Creation Kit
+## Subject Creation Kit for Chatbots
 
 We have created the **Subject Creation Kit** to help you easily build your own custom subjects. This kit includes a chatbot-ready prompt file that guides you through the process of defining your subject's properties and sections.
 
 Download the kit here: [Subject-Maker-Kit.zip](https://github.com/ricparks/note-maker-ai/raw/main/docs/Subject-Maker-Kit.zip)
 
 The zip file includes:
-*   `Subject-Maker-Kit.md`: The chatbot prompt file.
+*   `Subject-Maker-Kit.md`: Suggested chatbot prompt for creating a Subject Definition File.
 *   `Subject-Definition-Guide.md`: Reference documentation.
-*   `README.md`: Instructions for using the kit.
+*   `README.md`:  This README file
 *   Three sample Subject Definition Files (SDFs).
-
 
 ## License
 
 This project is licensed under the [AGPLv3 License](LICENSE).
+
+### Commercial License Option
+If you wish to use this software in a proprietary product or are unable to comply with the terms of the AGPLv3, a commercial license is available. 
+For commercial licensing inquiries, please contact: [license@theapplicationfoundry.com](mailto:license@theapplicationfoundry.com)

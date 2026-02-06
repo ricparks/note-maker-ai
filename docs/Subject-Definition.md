@@ -15,6 +15,8 @@ Let's walk through creation of a new subject, Recipe.
 
     ```yaml
     subject_name: "Recipe"
+    id: "recipe"
+    sd_version: "1.0"
     icon: "chef-hat"
 
     naming:
@@ -67,7 +69,7 @@ NoteMaker AI looks for this ` ```yaml ` block in the body of the note.
 | :--- | :--- |
 | `subject_name` | **Required.** The display name used in commands (e.g., "Create **Recipe** note"). |
 | `icon` | **Required.** The name of any [Lucide icon](https://lucide.dev/icons) (e.g., `book`, `camera`, `zap`). |
-| `id` | **Recommended.** A unique, stable identifier (e.g., `recipe_v1`). See [Advanced Features](#custom-ids--renaming) below. |
+| `id` | **Recommended.** A unique, stable identifier (e.g., `recipe`). See [Advanced Features](#custom-ids--renaming) below. |
 
 #### 2. Naming & File Paths
 
@@ -105,7 +107,7 @@ properties:
 
 *   **`key`**: The name of the property in the output note.
 *   **`instruction`**: Tell the AI what to look for. If omitted, you **must** provide a `default`.
-*   **`default`**: A value to use if the AI fails or if you don't want the AI to extract it (e.g., static tags).
+*   **`default`**: A value to auto-insert. **Note**: If provided, the AI is *not* asked for this property. It acts as an override (e.g., for static tags or version numbers).
 *   **`type`**: Set to `list`, `sequence`, or `array` to force the AI to return a list of strings.
 *   **`touch_me_not`**: Set to `true` to protect this property from being overwritten when you Redo the note (useful for manual user ratings or flags).
 
@@ -146,16 +148,7 @@ The composition utilizes...
 *   **`trailing_prompt`**: (Result defaults to empty string) Sets final formatting rules.
     *   *Example:* "If a field is unknown, use an empty string. If you do not have reasonable confidence about idenfying the plant, call it 'Unidentified' and leave all property values blank."
 
-### Image Metadata (EXIF)
 
-NoteMaker automatically extracts available EXIF metadata (Date, GPS Location, Camera Model, etc.) and appends it to the AI prompt as context. 
-
-You do not need special placeholders to use this. simply refer to it in your natural language instructions:
-
-*   "Extract the date of the event. Use the photo's metadata date if avaiable."
-*   "Identify the city and country based on the GPS coordinates provided."
-*   "Note the technical camera settings if they are present in the context."
----
 
 ### Placeholders
 
@@ -185,6 +178,18 @@ sections:
 #### Property Preservation
 
 You can also preserve specific Frontmatter properties (like manual ratings or tags) by adding `touch_me_not: true` to the property definition. See the [Properties](#3-properties-frontmatter) section for details.
+
+---
+
+### Image Metadata (EXIF)
+
+NoteMaker automatically extracts available EXIF metadata (Date, GPS Location, Camera Model, etc.) and appends it to the AI prompt as context. 
+
+You do not need special placeholders to use this. simply refer to it in your natural language instructions:
+
+*   "Extract the date of the event. Use the photo's metadata date if avaiable."
+*   "Identify the city and country based on the GPS coordinates provided."
+*   "Note the technical camera settings if they are present in the context."
 
 ---
 
