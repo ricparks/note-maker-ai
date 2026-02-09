@@ -1,0 +1,188 @@
+/*
+ * Copyright (C) 2026 The Application Foundry, LLC 
+ *
+ * This file is part of NoteMakerAI.
+ *
+ * NoteMakerAI is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published
+ * by the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * NoteMakerAI is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ *
+ * =========================================================================
+ *
+ * COMMERCIAL LICENSE OPTION
+ *
+ * If you wish to use this software in a proprietary product or are unable
+ * to comply with the terms of the AGPLv3, a commercial license is available.
+ *
+ * For commercial licensing inquiries, please contact: license@theapplicationfoundry.com 
+ *
+ * =========================================================================
+ */
+/*
+
+This CSS file will be included with your plugin, and
+available in the app when your plugin is enabled.
+
+If your plugin does not need CSS, delete this file.
+
+*/
+
+/* Ghost, compact danger button for delete actions */
+.notemaker-btn-ghost-danger {
+	background: transparent;
+	color: var(--text-muted);
+	border: none;
+	padding: 2px 6px;
+	line-height: 1;
+	border-radius: 6px;
+}
+
+.notemaker-btn-ghost-danger:hover,
+.notemaker-btn-ghost-danger:active {
+	background: var(--background-modifier-error);
+	color: var(--text-on-accent);
+}
+
+.notemaker-btn-ghost-danger:focus-visible {
+	outline: 2px solid var(--background-modifier-error);
+	outline-offset: 1px;
+}
+
+/* Small square-ish icon button sizing */
+.notemaker-icon-btn {
+	min-width: 24px;
+	min-height: 24px;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 14px;
+}
+
+/* Confirm Modal */
+.notemaker-confirm-checkbox-wrap {
+	margin-top: 1em;
+	margin-bottom: 1.5em;
+}
+
+.notemaker-confirm-footer {
+	margin-top: 1em;
+}
+
+.notemaker-confirm-cancel-btn {
+	margin-right: 12px;
+}
+
+/* Progress Modal */
+.notemaker-progress-footer {
+	margin-top: 1em;
+}
+
+.notemaker-progress-log {
+	max-height: 300px;
+	overflow-y: auto;
+	font-family: var(--font-monospace);
+	font-size: 0.9em;
+	white-space: pre-wrap;
+	padding: 8px;
+	background-color: var(--background-primary);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 4px;
+}
+
+.notemaker-progress-line {
+	margin-bottom: 4px;
+	line-height: 1.4;
+}
+
+.notemaker-progress-line.is-error {
+	color: var(--text-error);
+}
+
+.notemaker-progress-line.is-info {
+	color: var(--text-normal);
+}
+
+.notemaker-progress-line .timestamp {
+	color: var(--text-muted);
+	font-size: 0.85em;
+}
+
+/* Settings Tab */
+.notemaker-subject-card {
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 8px;
+	padding: 12px;
+	margin-bottom: 12px;
+	background-color: var(--background-secondary);
+}
+
+.notemaker-subject-header {
+	display: flex;
+	justify-content: space-between;
+	margin-bottom: 10px;
+}
+
+.notemaker-setting-item-name {
+	margin: 0;
+}
+
+.notemaker-add-subject {
+	display: flex;
+	justify-content: center;
+	margin-bottom: 24px;
+}
+
+.notemaker-llm-rows>div {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	margin-bottom: 8px;
+}
+
+.notemaker-input-label {
+	min-width: 8ch;
+}
+
+.notemaker-model-wrap {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	flex: 1;
+}
+
+.notemaker-input-model-select {
+	min-width: 16ch;
+}
+
+.notemaker-input-custom-model {
+	min-width: 12ch;
+	flex: 1;
+}
+
+.notemaker-input-api-key {
+	width: 28ch;
+}
+
+.notemaker-add-llm-wrap {
+	display: flex;
+	justify-content: flex-end;
+	margin-top: 8px;
+	margin-bottom: 18px;
+}
+
+.notemaker-default-llm-select {
+	min-width: 12ch;
+}
+
+.notemaker-llm-remove-btn {
+	margin-left: auto;
+}
