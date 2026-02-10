@@ -13,7 +13,7 @@ naming:
 
 properties:
     - key: "artist"
-      instruction: "Artist or Band name. If the artist has a first and last name, list the name as first name, last name."
+      instruction: "Artist or Band name. If the artist has a first and last name, list the name as 'last name, first name'."
     - key: "album"
       instruction: "Album title"
     - key: "year"
