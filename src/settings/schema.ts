@@ -103,7 +103,7 @@ export const DEFAULT_SETTINGS: NoteMakerAISettings = {
     {
       label: "gemini3",
       vendor: "gemini",
-      model: "gemini-3-pro-preview",
+      model: "gemini-3.1-pro-preview",
       apiKey: process.env.GEMINI_API_KEY || "",
     },
   ],
