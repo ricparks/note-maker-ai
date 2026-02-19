@@ -1,5 +1,7 @@
 # NoteMakerAI for Obsidian
 
+*This project is public for transparency and use, but I am not currently accepting outside contributions or Pull Requests.*
+
 **Turn any photo into a structured Obsidian note using AI.**
 
 NoteMakerAI helps you create and add to collections such as Books, Wine, or Albums—by converting photos into rich, structured notes. Define your own "Subjects" using simple YAML files such as Wine, Albums, or Recipes (see the [Subject Definition Guide](docs/Subject-Definition.md)), and let your selected LLM extract metadata, write summaries, and gather all manner of information about the subject in the photo. NoteMakerAI is designed to work well with the Bases feature of Obsidian by allowing you to quickly add new notes in a common format, full of rich information, with a minimum of fuss.
