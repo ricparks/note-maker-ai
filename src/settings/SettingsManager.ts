@@ -40,15 +40,16 @@ export class SettingsManager {
   get data(): NoteMakerAISettings { return this._settings; }
 
   async load() {
-    const stored = await this.plugin.loadData();
+    const raw = await this.plugin.loadData() as Partial<NoteMakerAISettings> | null | undefined;
+    const stored = raw ?? {};
     // Deep merge with defaults to ensure all nested fields exist
     this._settings = {
       ...DEFAULT_SETTINGS,
       ...stored,
-      folders: { ...DEFAULT_SETTINGS.folders, ...stored?.folders },
-      image: { ...DEFAULT_SETTINGS.image, ...stored?.image },
-      llms: stored?.llms ?? DEFAULT_SETTINGS.llms,
-      subjects: stored?.subjects ?? DEFAULT_SETTINGS.subjects,
+      folders: { ...DEFAULT_SETTINGS.folders, ...stored.folders } as typeof DEFAULT_SETTINGS.folders,
+      image: { ...DEFAULT_SETTINGS.image, ...stored.image } as typeof DEFAULT_SETTINGS.image,
+      llms: stored.llms ?? DEFAULT_SETTINGS.llms,
+      subjects: stored.subjects ?? DEFAULT_SETTINGS.subjects,
     };
   }
 

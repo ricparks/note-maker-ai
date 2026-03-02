@@ -40,9 +40,9 @@ export interface SubjectInfoBase {
   // Canonical secondary producer/author/etc.
   producer?: string;
   // Original JSON or object returned by the AI (for debugging or advanced templates)
-  raw: any;
+  raw: unknown;
   // Arbitrary structured fields (normalized key/value pairs)
-  fields: Record<string, string | number | boolean | null | any[]>;
+  fields: Record<string, unknown>;
   // Internal flag: true if the {{original_image}} placeholder was substituted
   _usedOriginalImagePlaceholder?: boolean;
 }
@@ -52,7 +52,7 @@ export interface SubjectNoteSections {
 }
 
 export interface SubjectNoteData {
-  properties: Record<string, any>;
+  properties: Record<string, unknown>;
   sections: SubjectNoteSections;
   /** Optional subject-specific summary suitable for logging. */
   logSummary?: string;
@@ -61,7 +61,7 @@ export interface SubjectNoteData {
 export interface SubjectExistingNoteContext {
   file: TFile;
   content: string;
-  frontmatter?: Record<string, any>;
+  frontmatter?: Record<string, unknown>;
 }
 
 export interface SubjectPromptContext {
@@ -115,9 +115,9 @@ export interface SubjectDefinition<T extends SubjectInfoBase = SubjectInfoBase> 
    * @param context - Optional photo/EXIF/LLM context for embedding images and metadata
    * @returns Complete markdown string including frontmatter and all sections
    */
-  getNoteParts(info: T, context: { photoLink?: string; coverFileName?: string; exifData?: import('../image/PreparedImage').ExifData; llmModel?: string }): { frontmatter: Record<string, any>; body: string };
+  getNoteParts(info: T, context: { photoLink?: string; coverFileName?: string; exifData?: import('../image/PreparedImage').ExifData; llmModel?: string }): { frontmatter: Record<string, unknown>; body: string };
   buildNote(info: T, context: { photoLink?: string; coverFileName?: string; exifData?: import('../image/PreparedImage').ExifData; llmModel?: string }): string;
-  parse(aiJson: any, context?: { originalImage?: TFile }): T;      // map AI JSON to typed structure with fallbacks
+  parse(aiJson: unknown, context?: { originalImage?: TFile }): T;      // map AI JSON to typed structure with fallbacks
   // Optional per-subject note directory (relative inside vault). If omitted, fallback constant used.
   directory?: string;
   /** Compute a canonical base photo file name (without extension). */
@@ -135,7 +135,7 @@ export interface SubjectDefinition<T extends SubjectInfoBase = SubjectInfoBase> 
   /** Return section headings marked as user-editable ({{my_notes}}) for preservation during redo. */
   getMyNotesSectionHeadings(): string[];
   /** Return property definitions with type info for proper serialization (e.g., boolean handling). */
-  getPropertyDefinitions(): Array<{ key: string; type?: string; default?: any }>;
+  getPropertyDefinitions(): Array<{ key: string; type?: string; default?: unknown }>;
 }
 
 /**

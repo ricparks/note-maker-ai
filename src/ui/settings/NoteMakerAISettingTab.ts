@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2026 The Application Foundry, LLC 
+ * Copyright (C) 2026 The Application Foundry, LLC
  *
  * This file is part of NoteMakerAI.
  *
@@ -23,7 +23,7 @@
  * If you wish to use this software in a proprietary product or are unable
  * to comply with the terms of the AGPLv3, a commercial license is available.
  *
- * For commercial licensing inquiries, please contact: license@theapplicationfoundry.com 
+ * For commercial licensing inquiries, please contact: license@theapplicationfoundry.com
  *
  * =========================================================================
  */
@@ -31,9 +31,10 @@
 import { App, PluginSettingTab, Setting, Notice } from "obsidian";
 import type NoteMakerAI from "../../main";
 import { Logger } from "../../utils/logger";
-import type { LlmVendor, LogLevel } from "../../settings/schema";
+import type { LlmVendor, LogLevel, ReducedImageOrientation, RotationDirection } from "../../settings/schema";
 import { SUBJECT_DIR, SUBJECT_PHOTOS_DIR } from "../../utils/constants";
 import { FolderSuggest } from "../components/FolderSuggest";
+import { confirm as confirmModal } from "../confirm/ConfirmModal";
 
 const OPENAI_MODEL_OPTIONS: Array<{ value: string; label: string }> = [
 	{ value: "gpt-5.1", label: "GPT-5.1" },
@@ -85,46 +86,50 @@ export class NoteMakerAISettingTab extends PluginSettingTab {
 		const renderSubjects = () => {
 			subjectsWrap.empty();
 			const subjects = this.plugin.settings.subjects || [];
-			
+
 			subjects.forEach((subject, idx) => {
 				const card = subjectsWrap.createEl("div", { cls: "notemaker-subject-card" });
 
-
-				// Header: Name + Loading styling
-				const header = card.createEl("div", { cls: "notemaker-subject-header" });
-				header.createEl("h4", { text: subject.name || "Untitled Subject", cls: "setting-item-name notemaker-setting-item-name" });
+				// Header: Name + Delete button as a Setting with heading style
+				const headerSetting = new Setting(card)
+					.setName(subject.name || "Untitled subject")
+					.setHeading();
 
 				// Delete Button
-				const delBtn = header.createEl("button", { text: "Delete" });
-				delBtn.addClass("mod-warning");
-				delBtn.onclick = async () => {
-					if (!confirm(`Delete subject "${subject.name}"?`)) return;
-					this.plugin.settings.subjects.splice(idx, 1);
-					await this.plugin.saveSettings();
-					await this.plugin.renderRibbons();
-					renderSubjects();
-				};
+				headerSetting.addButton(btn => {
+					btn.setButtonText("Delete")
+						.setWarning()
+						.onClick(() => {
+							void (async () => {
+								const result = await confirmModal(this.app, `Delete subject "${subject.name}"?`);
+								if (!result.ok) return;
+								this.plugin.settings.subjects.splice(idx, 1);
+								await this.plugin.saveSettings();
+								this.plugin.renderRibbons();
+								renderSubjects();
+							})();
+						});
+				});
 
 				// Name
 				new Setting(card)
 					.setName("Subject name")
 					.setDesc("Name used in menus and ribbons.")
 					.addText(text => text
-						.setPlaceholder("e.g. Books, Recipes, Wine")
+						.setPlaceholder("Books, recipes, wine")
 						.setValue(subject.name)
 						.onChange(async (val) => {
 							subject.name = val;
 							await this.plugin.saveSettings();
 							// Header update
-							const h4 = header.querySelector("h4");
-							if (h4) h4.textContent = val || "Untitled Subject";
-							await this.plugin.renderRibbons();
+							headerSetting.setName(val || "Untitled subject");
+							this.plugin.renderRibbons();
 						}));
 
 				// Definition Path
 				new Setting(card)
 					.setName("Definition file")
-					.setDesc("Path to the Subject Definition File (SDF).")
+					.setDesc("Path to the subject definition file (SDF).")
 					.addText(text => {
 						text.setPlaceholder("e.g. settings/RecipeSubject.md")
 							.setValue(subject.subjectDefinitionPath)
@@ -132,12 +137,14 @@ export class NoteMakerAISettingTab extends PluginSettingTab {
 								subject.subjectDefinitionPath = val;
 								await this.plugin.saveSettings();
 								// Trigger reload of this subject
-								await (this.plugin as any).reloadSubject(subject);
+								await this.plugin.reloadSubject(subject);
 							});
-						new FolderSuggest(this.app, text.inputEl, async (picked) => {
-							subject.subjectDefinitionPath = picked;
-							await this.plugin.saveSettings();
-							await (this.plugin as any).reloadSubject(subject);
+						new FolderSuggest(this.app, text.inputEl, (picked) => {
+							void (async () => {
+								subject.subjectDefinitionPath = picked;
+								await this.plugin.saveSettings();
+								await this.plugin.reloadSubject(subject);
+							})();
 						});
 					});
 
@@ -151,12 +158,14 @@ export class NoteMakerAISettingTab extends PluginSettingTab {
 						.onChange(async (val) => {
 								subject.notesDir = val;
 								await this.plugin.saveSettings();
-								await (this.plugin as any).reloadSubject(subject);
+								await this.plugin.reloadSubject(subject);
 							});
-						new FolderSuggest(this.app, text.inputEl, async (picked) => {
-							subject.notesDir = picked;
-							await this.plugin.saveSettings();
-							await (this.plugin as any).reloadSubject(subject);
+						new FolderSuggest(this.app, text.inputEl, (picked) => {
+							void (async () => {
+								subject.notesDir = picked;
+								await this.plugin.saveSettings();
+								await this.plugin.reloadSubject(subject);
+							})();
 						});
 					});
 
@@ -170,28 +179,32 @@ export class NoteMakerAISettingTab extends PluginSettingTab {
 						.onChange(async (val) => {
 								subject.photosDir = val;
 								await this.plugin.saveSettings();
-								await (this.plugin as any).reloadSubject(subject);
+								await this.plugin.reloadSubject(subject);
 							});
-						new FolderSuggest(this.app, text.inputEl, async (picked) => {
-							subject.photosDir = picked;
-							await this.plugin.saveSettings();
-							await (this.plugin as any).reloadSubject(subject);
+						new FolderSuggest(this.app, text.inputEl, (picked) => {
+							void (async () => {
+								subject.photosDir = picked;
+								await this.plugin.saveSettings();
+								await this.plugin.reloadSubject(subject);
+							})();
 						});
 					});
 
 				// LLM Override
 				new Setting(card)
 					.setName("LLM override")
-					.setDesc("Optional. Use a specific LLM for this subject.")
+					.setDesc("Use a specific LLM for this subject (optional).")
 					.addDropdown(dd => {
 						dd.addOption("", "Default (global setting)");
 						const llms = this.plugin.settings.llms || [];
-						llms.forEach(l => dd.addOption(l.label, l.label));
+						llms.forEach(l => { void dd.addOption(l.label, l.label); });
 						dd.setValue(subject.llmLabel || "");
-						dd.onChange(async (val) => {
-							subject.llmLabel = val || undefined;
-							await this.plugin.saveSettings();
-							await (this.plugin as any).reloadSubject(subject); // Update active subject config
+						dd.onChange((val) => {
+							void (async () => {
+								subject.llmLabel = val || undefined;
+								await this.plugin.saveSettings();
+								await this.plugin.reloadSubject(subject); // Update active subject config
+							})();
 						});
 					});
 			});
@@ -201,17 +214,19 @@ export class NoteMakerAISettingTab extends PluginSettingTab {
 
 		const addSubjectWrap = containerEl.createEl("div", { cls: "notemaker-add-subject" });
 
-		const addBtn = addSubjectWrap.createEl("button", { text: "+ Add new subject" });
+		const addBtn = addSubjectWrap.createEl("button", { text: "Add new subject" });
 		addBtn.addClass("mod-cta");
-		addBtn.onclick = async () => {
-			this.plugin.settings.subjects.push({
-				name: "",
-				notesDir: "",
-				photosDir: "",
-				subjectDefinitionPath: "",
-			});
-			await this.plugin.saveSettings();
-			renderSubjects();
+		addBtn.onclick = () => {
+			void (async () => {
+				this.plugin.settings.subjects.push({
+					name: "",
+					notesDir: "",
+					photosDir: "",
+					subjectDefinitionPath: "",
+				});
+				await this.plugin.saveSettings();
+				renderSubjects();
+			})();
 		};
 
 		// LLM CONFIGURATION
@@ -259,7 +274,7 @@ export class NoteMakerAISettingTab extends PluginSettingTab {
 				}
 				defaultLlmSelectEl.value = this.plugin.settings.defaultLlmLabel || labels[0] || "";
 			}
-			
+
 
 			if (needsSave) {
 				await this.plugin.saveSettings();
@@ -293,35 +308,37 @@ export class NoteMakerAISettingTab extends PluginSettingTab {
 				labelInput.placeholder = "Label (max 12)";
 				labelInput.value = entry.label;
 				labelInput.maxLength = 12;
-				labelInput.onchange = async () => {
-					const val = (labelInput.value || "").trim();
-					const valid = /^[A-Za-z0-9_]{1,12}$/.test(val);
-					if (!valid) {
-						new Notice(
-							"Label must be 1–12 characters (letters, numbers, or underscore)."
+				labelInput.onchange = () => {
+					void (async () => {
+						const val = (labelInput.value || "").trim();
+						const valid = /^[A-Za-z0-9_]{1,12}$/.test(val);
+						if (!valid) {
+							new Notice(
+								"Label must be 1–12 characters (letters, numbers, or underscore)."
+							);
+							labelInput.value = entry.label;
+							return;
+						}
+						const duplicate = llms.some(
+							(other, otherIdx) =>
+								otherIdx !== idx &&
+								other.label.toLowerCase() === val.toLowerCase()
 						);
-						labelInput.value = entry.label;
-						return;
-					}
-					const duplicate = llms.some(
-						(other, otherIdx) =>
-							otherIdx !== idx &&
-							other.label.toLowerCase() === val.toLowerCase()
-					);
-					if (duplicate) {
-						new Notice("Label must be unique.");
-						labelInput.value = entry.label;
-						return;
-					}
-					const previous = entry.label;
-					if (previous === val) return;
-					entry.label = val;
-					if (this.plugin.settings.defaultLlmLabel === previous) {
-						this.plugin.settings.defaultLlmLabel = val;
-					}
+						if (duplicate) {
+							new Notice("Label must be unique.");
+							labelInput.value = entry.label;
+							return;
+						}
+						const previous = entry.label;
+						if (previous === val) return;
+						entry.label = val;
+						if (this.plugin.settings.defaultLlmLabel === previous) {
+							this.plugin.settings.defaultLlmLabel = val;
+						}
 
-					await this.plugin.saveSettings();
-					await refreshLlmDependentSelects();
+						await this.plugin.saveSettings();
+						await refreshLlmDependentSelects();
+					})();
 				};
 
 				const vendorSelect = row.createEl("select");
@@ -338,17 +355,19 @@ export class NoteMakerAISettingTab extends PluginSettingTab {
 					optEl.value = opt.value;
 				});
 				vendorSelect.value = entry.vendor;
-				vendorSelect.onchange = async () => {
-					const newVendor = vendorSelect.value as LlmVendor;
-					if (entry.vendor === newVendor) return;
-					entry.vendor = newVendor;
-					const defaults = MODEL_OPTION_MAP[newVendor] || [];
-					if (defaults.length > 0) {
-						entry.model = defaults[0].value;
-					}
-					await this.plugin.saveSettings();
-					renderLlmRows();
-					await refreshLlmDependentSelects();
+				vendorSelect.onchange = () => {
+					void (async () => {
+						const newVendor = vendorSelect.value as LlmVendor;
+						if (entry.vendor === newVendor) return;
+						entry.vendor = newVendor;
+						const defaults = MODEL_OPTION_MAP[newVendor] || [];
+						if (defaults.length > 0) {
+							entry.model = defaults[0].value;
+						}
+						syncModelControls();
+						await this.plugin.saveSettings();
+						await refreshLlmDependentSelects();
+					})();
 				};
 
 				const modelWrap = row.createEl("div", { cls: "notemaker-model-wrap" });
@@ -360,7 +379,7 @@ export class NoteMakerAISettingTab extends PluginSettingTab {
                     cls: "notemaker-input-custom-model"
 				});
 				customModelInput.placeholder = "Custom model";
-				customModelInput.style.display = "none";
+				customModelInput.addClass("notemaker-hidden");
 				customModelInput.maxLength = 80;
 
 				const syncModelControls = () => {
@@ -383,20 +402,20 @@ export class NoteMakerAISettingTab extends PluginSettingTab {
 					const matched = options.find((opt) => opt.value === trimmed);
 					if (matched) {
 						modelSelect.value = matched.value;
-						customModelInput.style.display = "none";
+						customModelInput.addClass("notemaker-hidden");
 						customModelInput.value = "";
 						return;
 					}
 					if (trimmed.length > 0) {
 						modelSelect.value = "__custom__";
-						customModelInput.style.display = "";
+						customModelInput.removeClass("notemaker-hidden");
 						customModelInput.value = trimmed;
 						return;
 					}
 					if (options.length > 0) {
 						const defaultValue = options[0].value;
 						modelSelect.value = defaultValue;
-						customModelInput.style.display = "none";
+						customModelInput.addClass("notemaker-hidden");
 						customModelInput.value = "";
 						if (entry.model !== defaultValue) {
 							entry.model = defaultValue;
@@ -405,78 +424,77 @@ export class NoteMakerAISettingTab extends PluginSettingTab {
 						return;
 					}
 					modelSelect.value = "__custom__";
-					customModelInput.style.display = "";
+					customModelInput.removeClass("notemaker-hidden");
 					customModelInput.value = "";
 				};
 
 				syncModelControls();
 
-				modelSelect.onchange = async () => {
-					if (modelSelect.value === "__custom__") {
-						customModelInput.style.display = "";
-						customModelInput.focus();
-						return;
-					}
-					const value = modelSelect.value;
-					customModelInput.style.display = "none";
-					customModelInput.value = "";
+				modelSelect.onchange = () => {
+					void (async () => {
+						if (modelSelect.value === "__custom__") {
+							customModelInput.removeClass("notemaker-hidden");
+							customModelInput.focus();
+							return;
+						}
+						const value = modelSelect.value;
+						customModelInput.addClass("notemaker-hidden");
+						customModelInput.value = "";
 
-					if (entry.model === value) return;
-					entry.model = value;
-					await this.plugin.saveSettings();
+						if (entry.model === value) return;
+						entry.model = value;
+						await this.plugin.saveSettings();
+					})();
 				};
 
-				customModelInput.onchange = async () => {
-					const value = customModelInput.value.trim();
-					if (!value) {
-						customModelInput.value = (entry.model || "").trim();
-						if (!customModelInput.value) {
-							customModelInput.style.display = "none";
-							syncModelControls();
+				customModelInput.onchange = () => {
+					void (async () => {
+						const value = customModelInput.value.trim();
+						if (!value) {
+							customModelInput.value = (entry.model || "").trim();
+							if (!customModelInput.value) {
+								customModelInput.addClass("notemaker-hidden");
+								syncModelControls();
+							}
+							return;
 						}
-						return;
-					}
-					if (entry.model === value) return;
-					entry.model = value;
-					modelSelect.value = "__custom__";
-					await this.plugin.saveSettings();
+						if (entry.model === value) return;
+						entry.model = value;
+						modelSelect.value = "__custom__";
+						await this.plugin.saveSettings();
+					})();
 				};
 
 				const apiKeyInput = row.createEl("input", { type: "password", cls: "notemaker-input-api-key" });
 				apiKeyInput.placeholder = "API key";
 				apiKeyInput.value = entry.apiKey || "";
-				apiKeyInput.onchange = async () => {
-					entry.apiKey = apiKeyInput.value.trim();
-					await this.plugin.saveSettings();
-				};
-
-				// Update visibility when vendor changes
-				const originalVendorOnChange = vendorSelect.onchange;
-				vendorSelect.onchange = async (e) => {
-					if (originalVendorOnChange) {
-						await (originalVendorOnChange as any).call(vendorSelect, e);
-					}
-					// No extra fields to toggle for now
+				apiKeyInput.onchange = () => {
+					void (async () => {
+						entry.apiKey = apiKeyInput.value.trim();
+						await this.plugin.saveSettings();
+					})();
 				};
 
 				const delBtn = row.createEl("button", { text: "×", cls: "notemaker-btn-ghost-danger notemaker-icon-btn notemaker-llm-remove-btn" });
 				delBtn.setAttr("aria-label", "Remove LLM");
 				delBtn.title = "Remove LLM";
 				delBtn.disabled = llms.length <= 1;
-				delBtn.onclick = async () => {
-					if (llms.length <= 1) return;
-					const [removed] = llms.splice(idx, 1);
-					if (removed) {
-						if (
-							this.plugin.settings.defaultLlmLabel === removed.label
-						) {
-							this.plugin.settings.defaultLlmLabel = llms[0]?.label;
-						}
+				delBtn.onclick = () => {
+					void (async () => {
+						if (llms.length <= 1) return;
+						const [removed] = llms.splice(idx, 1);
+						if (removed) {
+							if (
+								this.plugin.settings.defaultLlmLabel === removed.label
+							) {
+								this.plugin.settings.defaultLlmLabel = llms[0]?.label;
+							}
 
-					}
-					await this.plugin.saveSettings();
-					renderLlmRows();
-					await refreshLlmDependentSelects();
+						}
+						await this.plugin.saveSettings();
+						renderLlmRows();
+						await refreshLlmDependentSelects();
+					})();
 				};
 			});
 		};
@@ -488,23 +506,25 @@ export class NoteMakerAISettingTab extends PluginSettingTab {
 			text: "Add LLM",
 		});
 		addLlmBtn.addClass("mod-cta");
-		addLlmBtn.onclick = async () => {
-			const llms = ensureLlmArray();
-			const newLabel = generateUniqueLlmLabel();
-			const defaults = MODEL_OPTION_MAP.gemini || [];
-			const newEntry = {
-				label: newLabel,
-				vendor: "gemini" as LlmVendor,
-				model: defaults[0]?.value || "",
-				apiKey: "",
-			};
-			this.plugin.settings.llms = [...llms, newEntry];
-			if (!this.plugin.settings.defaultLlmLabel) {
-				this.plugin.settings.defaultLlmLabel = newEntry.label;
-			}
-			await this.plugin.saveSettings();
-			renderLlmRows();
-			await refreshLlmDependentSelects();
+		addLlmBtn.onclick = () => {
+			void (async () => {
+				const llms = ensureLlmArray();
+				const newLabel = generateUniqueLlmLabel();
+				const defaults = MODEL_OPTION_MAP.gemini || [];
+				const newEntry = {
+					label: newLabel,
+					vendor: "gemini" as LlmVendor,
+					model: defaults[0]?.value || "",
+					apiKey: "",
+				};
+				this.plugin.settings.llms = [...llms, newEntry];
+				if (!this.plugin.settings.defaultLlmLabel) {
+					this.plugin.settings.defaultLlmLabel = newEntry.label;
+				}
+				await this.plugin.saveSettings();
+				renderLlmRows();
+				await refreshLlmDependentSelects();
+			})();
 		};
 
 		const defaultLlmSetting = new Setting(containerEl)
@@ -515,10 +535,12 @@ export class NoteMakerAISettingTab extends PluginSettingTab {
 			selectEl.dataset.role = "llm-default-select";
 			defaultLlmSelectEl = selectEl;
             selectEl.addClass("notemaker-default-llm-select");
-			dd.onChange(async (value) => {
-				if (this.plugin.settings.defaultLlmLabel === value) return;
-				this.plugin.settings.defaultLlmLabel = value || undefined;
-				await this.plugin.saveSettings();
+			dd.onChange((value) => {
+				void (async () => {
+					if (this.plugin.settings.defaultLlmLabel === value) return;
+					this.plugin.settings.defaultLlmLabel = value || undefined;
+					await this.plugin.saveSettings();
+				})();
 			});
 		});
 
@@ -563,11 +585,11 @@ export class NoteMakerAISettingTab extends PluginSettingTab {
 					if (!this.plugin.settings.image) {
 						this.plugin.settings.image = {
 							keepOriginalAfterResize: false,
-							orientation: val as any,
+							orientation: val as ReducedImageOrientation,
 							rotationDirection: 'clockwise',
 						};
 					} else {
-						this.plugin.settings.image.orientation = val as any;
+						this.plugin.settings.image.orientation = val as ReducedImageOrientation;
 					}
 					await this.plugin.saveSettings();
 				});
@@ -585,10 +607,10 @@ export class NoteMakerAISettingTab extends PluginSettingTab {
 						this.plugin.settings.image = {
 							keepOriginalAfterResize: false,
 							orientation: 'maintain',
-							rotationDirection: val as any,
+							rotationDirection: val as RotationDirection,
 						};
 					} else {
-						this.plugin.settings.image.rotationDirection = val as any;
+						this.plugin.settings.image.rotationDirection = val as RotationDirection;
 					}
 					await this.plugin.saveSettings();
 				});

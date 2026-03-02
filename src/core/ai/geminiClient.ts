@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2026 The Application Foundry, LLC 
+ * Copyright (C) 2026 The Application Foundry, LLC
  *
  * This file is part of NoteMakerAI.
  *
@@ -23,12 +23,32 @@
  * If you wish to use this software in a proprietary product or are unable
  * to comply with the terms of the AGPLv3, a commercial license is available.
  *
- * For commercial licensing inquiries, please contact: license@theapplicationfoundry.com 
+ * For commercial licensing inquiries, please contact: license@theapplicationfoundry.com
  *
  * =========================================================================
  */
 import { AiResult, GeminiParams } from './types';
 import { fetchWithTimeout, isTimeoutError } from './fetchWithTimeout';
+
+interface GeminiErrorPayload {
+  error?: { message?: string };
+}
+
+interface GeminiPart {
+  text?: string;
+}
+
+interface GeminiContent {
+  parts?: GeminiPart[];
+}
+
+interface GeminiCandidate {
+  content?: GeminiContent;
+}
+
+interface GeminiResponse {
+  candidates?: GeminiCandidate[];
+}
 
 export async function callGeminiClient(params: GeminiParams): Promise<AiResult> {
   const { base64Image, apiKey, model, prompt } = params;
@@ -60,19 +80,19 @@ export async function callGeminiClient(params: GeminiParams): Promise<AiResult> 
     }, TIMEOUT_MS);
 
     if (!response.ok) {
-      let errorPayload: any = null;
-      try { errorPayload = await response.json(); } catch {}
+      let errorPayload: GeminiErrorPayload | null = null;
+      try { errorPayload = await response.json() as GeminiErrorPayload; } catch { /* ignore parse errors */ }
       return {
         ok: false,
-        error: errorPayload?.error?.message || `Gemini API HTTP ${response.status}`,
+        error: errorPayload?.error?.message ?? `Gemini API HTTP ${response.status}`,
         errorType: 'api',
         raw: errorPayload,
         model
       };
     }
 
-    let outer: any;
-    try { outer = await response.json(); } catch (e) {
+    let outer: GeminiResponse;
+    try { outer = await response.json() as GeminiResponse; } catch (e) {
       return { ok: false, error: 'Failed to parse Gemini JSON body', errorType: 'parse', cause: e, model };
     }
 
@@ -82,7 +102,7 @@ export async function callGeminiClient(params: GeminiParams): Promise<AiResult> 
     }
 
     try {
-      const data = JSON.parse(text);
+      const data = JSON.parse(text) as unknown;
       return { ok: true, data, raw: outer, model };
     } catch (e) {
       return { ok: false, error: 'Gemini inner JSON parse error', errorType: 'parse', raw: { outer, text }, cause: e, model };

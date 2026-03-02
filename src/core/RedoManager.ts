@@ -35,7 +35,6 @@ import type { NoteMakerCore } from "./NoteMakerCore";
 import type {
 	SubjectInfoBase,
 	SubjectNoteData,
-	SubjectExistingNoteContext,
 	SubjectPromptContext,
 	ActiveSubject,
 	SubjectNoteSections
@@ -68,7 +67,7 @@ type RedoContext = {
 	prompt: string;
 	photoFile: TFile;
 	photoBase64: string;
-	rawSubject?: any;
+	rawSubject?: unknown;
 };
 
 /**
@@ -101,12 +100,15 @@ export class RedoManager {
 
 		// Safety Check: Verify subject matches origin
 		// We trust 'note_created_by' in frontmatter if present
-		if (frontmatter && frontmatter['note_created_by']) {
-			const origin = this.sanitizeId(frontmatter['note_created_by']);
+		const noteCreatedBy = typeof frontmatter?.['note_created_by'] === 'string'
+			? frontmatter['note_created_by']
+			: null;
+		if (noteCreatedBy) {
+			const origin = this.sanitizeId(noteCreatedBy);
 			const target = this.sanitizeId(subject.definition!.id || subject.name);
 
 			if (origin !== target && origin.length > 0) {
-				const originName = frontmatter['note_created_by']; // Display name
+				const originName = noteCreatedBy; // Display name
 				const targetName = subject.name; // Display name
 
 				const msg = `Subject Mismatch\n\nThis note was originally created as **${originName}**, but you are about to redo it using the **${targetName}** subject.\n\nThis will likely overwrite properties and sections with incorrect data.\n\nAre you sure you want to proceed?`;
@@ -221,7 +223,7 @@ export class RedoManager {
 	}
 
 	private parseRedoSubject(
-		raw: any,
+		raw: unknown,
 		progressModal: ReturnType<typeof createProgressModal>,
 		subject: ActiveSubject
 	): SubjectInfoBase | null {
@@ -354,7 +356,7 @@ export class RedoManager {
 	 * Handles boolean serialization to ensure true/false (not Yes/No).
 	 */
 	private buildNoteContent(
-		frontmatter: Record<string, any>,
+		frontmatter: Record<string, unknown>,
 		body: string,
 		subject: ActiveSubject
 	): string {
@@ -503,8 +505,8 @@ export class RedoManager {
 
 			const newLink = `${prefix}${barePath}${suffix}`;
 			replacements.push({
-				start: match.index!,
-				end: match.index! + match[0].length,
+				start: match.index,
+				end: match.index + match[0].length,
 				newText: newLink,
 			});
 		}
@@ -527,10 +529,10 @@ export class RedoManager {
 	}
 
 	private extractExifFromProperties(
-		properties?: Record<string, any>
+		properties?: Record<string, unknown>
 	): ExifData | undefined {
 		if (!properties) return undefined;
-		const toNumber = (value: any): number | undefined => {
+		const toNumber = (value: unknown): number | undefined => {
 			if (typeof value === "number" && Number.isFinite(value)) return value;
 			if (typeof value === "string" && value.trim().length > 0) {
 				const parsed = Number(value);
@@ -538,9 +540,11 @@ export class RedoManager {
 			}
 			return undefined;
 		};
-		const toString = (value: any): string => {
+		const toString = (value: unknown): string => {
 			if (value === undefined || value === null) return "";
-			return String(value).trim();
+			if (typeof value === 'string') return value.trim();
+			if (typeof value === 'number' || typeof value === 'boolean') return String(value).trim();
+			return "";
 		};
 
 		const latitude = toNumber(properties.latitude);
@@ -601,7 +605,7 @@ export class RedoManager {
 		return null;
 	}
 
-	private normalizeLinkTarget(raw: any): string | null {
+	private normalizeLinkTarget(raw: unknown): string | null {
 		if (typeof raw !== "string") return null;
 		let text = raw.trim();
 		if (!text) return null;

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2026 The Application Foundry, LLC 
+ * Copyright (C) 2026 The Application Foundry, LLC
  *
  * This file is part of NoteMakerAI.
  *
@@ -23,7 +23,7 @@
  * If you wish to use this software in a proprietary product or are unable
  * to comply with the terms of the AGPLv3, a commercial license is available.
  *
- * For commercial licensing inquiries, please contact: license@theapplicationfoundry.com 
+ * For commercial licensing inquiries, please contact: license@theapplicationfoundry.com
  *
  * =========================================================================
  */
@@ -33,7 +33,27 @@ import { fetchWithTimeout, isTimeoutError } from './fetchWithTimeout';
 const OPENROUTER_ENDPOINT = 'https://openrouter.ai/api/v1/chat/completions';
 const TIMEOUT_MS = 180000; // 3 minutes
 
-function parseOpenRouterJson(text: string): { ok: true; data: any } | { ok: false; error: unknown; raw: { text: string; candidates: string[] } } {
+interface OpenRouterErrorPayload {
+  error?: string;
+}
+
+interface OpenRouterContentChunk {
+  text?: string;
+}
+
+interface OpenRouterMessage {
+  content?: string | OpenRouterContentChunk[];
+}
+
+interface OpenRouterChoice {
+  message?: OpenRouterMessage;
+}
+
+interface OpenRouterResponse {
+  choices?: OpenRouterChoice[];
+}
+
+function parseOpenRouterJson(text: string): { ok: true; data: unknown } | { ok: false; error: unknown; raw: { text: string; candidates: string[] } } {
   const trimmed = text.trim();
   const candidates: string[] = [];
 
@@ -53,7 +73,7 @@ function parseOpenRouterJson(text: string): { ok: true; data: any } | { ok: fals
   let lastError: unknown;
   for (const candidate of candidates) {
     try {
-      const data = JSON.parse(candidate);
+      const data = JSON.parse(candidate) as unknown;
       return { ok: true, data };
     } catch (error) {
       lastError = error;
@@ -108,19 +128,19 @@ export async function callOpenRouterClient(params: OpenRouterParams): Promise<Ai
     }, TIMEOUT_MS);
 
     if (!response.ok) {
-      let errorPayload: any = null;
-      try { errorPayload = await response.json(); } catch {}
+      let errorPayload: OpenRouterErrorPayload | null = null;
+      try { errorPayload = await response.json() as OpenRouterErrorPayload; } catch { /* ignore parse errors */ }
       return {
         ok: false,
-        error: errorPayload?.error || `OpenRouter API HTTP ${response.status}`,
+        error: errorPayload?.error ?? `OpenRouter API HTTP ${response.status}`,
         errorType: 'api',
         raw: errorPayload,
         model,
       };
     }
 
-    let parsed: any;
-    try { parsed = await response.json(); } catch (cause) {
+    let parsed: OpenRouterResponse;
+    try { parsed = await response.json() as OpenRouterResponse; } catch (cause) {
       return {
         ok: false,
         error: 'Failed to parse OpenRouter JSON body',
@@ -130,11 +150,11 @@ export async function callOpenRouterClient(params: OpenRouterParams): Promise<Ai
       };
     }
 
-    const content = parsed?.choices?.[0]?.message?.content;
-    const text = typeof content === 'string'
-      ? content
-      : Array.isArray(content)
-        ? content.find((chunk: any) => typeof chunk?.text === 'string')?.text
+    const messageContent = parsed?.choices?.[0]?.message?.content;
+    const text = typeof messageContent === 'string'
+      ? messageContent
+      : Array.isArray(messageContent)
+        ? messageContent.find((chunk: OpenRouterContentChunk) => typeof chunk?.text === 'string')?.text
         : undefined;
 
     if (typeof text !== 'string') {

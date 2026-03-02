@@ -142,7 +142,7 @@ export class NoteMakerCore {
 	async processSelection(explicitSubject?: import("./subject").ActiveSubject): Promise<void> {
 		const subject = explicitSubject || this.firstSubject;
 		if (!subject) {
-			new Notice("No Subject Definition File configured. Please set one in Settings > NoteMaker AI.");
+			new Notice("No subject definition file configured. Open NoteMaker AI settings to configure one.");
 			return;
 		}
 		
@@ -150,11 +150,11 @@ export class NoteMakerCore {
 
 		// Validate required directories are configured
 		if (!subject.notesDir?.trim()) {
-			new Notice(`Notes folder not configured for "${subject.name}". Please set it in Settings > NoteMaker AI.`);
+			new Notice(`Notes folder not configured for "${subject.name}". Open NoteMaker AI settings to configure it.`);
 			return;
 		}
 		if (!subject.photosDir?.trim()) {
-			new Notice(`Photos folder not configured for "${subject.name}". Please set it in Settings > NoteMaker AI.`);
+			new Notice(`Photos folder not configured for "${subject.name}". Open NoteMaker AI settings to configure it.`);
 			return;
 		}
 
@@ -197,11 +197,21 @@ export class NoteMakerCore {
 	 * Returns empty array if detection fails or API is incompatible.
 	 */
 	private getExplorerSelection(): TFile[] {
+		interface ExplorerFileItem {
+			file?: unknown;
+			titleEl?: HTMLElement;
+			selfEl?: HTMLElement;
+			el?: HTMLElement;
+		}
+		interface ExplorerView {
+			fileItems?: Record<string, ExplorerFileItem>;
+		}
+
 		try {
 			const leaves = this.plugin.app.workspace.getLeavesOfType("file-explorer");
 			if (leaves.length === 0) return [];
-			const view = leaves[0].view as any;
-			
+			const view = leaves[0].view as ExplorerView;
+
 			// Heuristic: Iterate fileItems and check for "is-selected" class
 			if (view && view.fileItems) {
 				const selectedFiles: TFile[] = [];
@@ -209,7 +219,7 @@ export class NoteMakerCore {
 				for (const path in view.fileItems) {
 					const item = view.fileItems[path];
 					if (!item) continue;
-					
+
 					// Check for selection class on the title/self element
 					// 'is-selected' is usually applied to the nav-file-title or specific container
 					const el = item.titleEl ?? item.selfEl ?? item.el;
@@ -283,7 +293,7 @@ export class NoteMakerCore {
 		progressModal.info(PROCESSING_NOTICE(file.name));
 
 		progressModal.info("Preparing image...");
-		const { notesDir, photosDir, llmLabelOverride } =
+		const { photosDir, llmLabelOverride } =
 			this.resolveSubjectDirsAndLlm(subject);
 		const preparedImage = new PreparedImage(this.plugin.app, file, {
 			photosDir: photosDir,
@@ -364,18 +374,18 @@ export class NoteMakerCore {
 
 			// Validation Guardrail
 			try {
-				const guard = (parsed.raw) as any || {};
+				const guard = (parsed.raw as Record<string, unknown>) || {};
 				// Additional check: does the subject itself want validation?
 				const subjectWantsValidation = !!subject.definition!.validateSubject;
-				
+
 				// Prefer subject-specific threshold, fallback to default (0.7)
 				const threshold = subject.definition!.validationThreshold ?? 0.7;
 
-				const predicted = guard.predicted_category as string | undefined;
+				const predicted = typeof guard.predicted_category === "string" ? guard.predicted_category : undefined;
 				const confidence = typeof guard.confidence === "number" ? guard.confidence : undefined;
 				const subjectMatch = typeof guard.subject_match === "boolean" ? guard.subject_match : true;
-				const reason = guard.reason as string | undefined;
-				
+				const reason = typeof guard.reason === "string" ? guard.reason : undefined;
+
 				const isMismatch = subjectMatch === false;
 
 				if (isMismatch && subjectWantsValidation) {
@@ -493,7 +503,7 @@ export class NoteMakerCore {
 		llmLabelOverride?: string,
 		subject?: import("./subject").ActiveSubject,
 		promptOverride?: string
-	): Promise<{ data: any; model: string } | null> {
+	): Promise<{ data: unknown; model: string } | null> {
 		let prompt: string;
 		if (promptOverride) {
 			prompt = promptOverride;
@@ -647,7 +657,7 @@ export class NoteMakerCore {
 		if (!existingPath) {
 			try {
 				await this.plugin.app.vault.createFolder(dir);
-			} catch (e: any) {
+			} catch (e) {
 				// Only ignore "folder already exists" errors; re-check to be safe
 				const existsNow = this.plugin.app.vault.getAbstractFileByPath(dir);
 				if (!existsNow) {

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2026 The Application Foundry, LLC 
+ * Copyright (C) 2026 The Application Foundry, LLC
  *
  * This file is part of NoteMakerAI.
  *
@@ -23,7 +23,7 @@
  * If you wish to use this software in a proprietary product or are unable
  * to comply with the terms of the AGPLv3, a commercial license is available.
  *
- * For commercial licensing inquiries, please contact: license@theapplicationfoundry.com 
+ * For commercial licensing inquiries, please contact: license@theapplicationfoundry.com
  *
  * =========================================================================
  */
@@ -35,11 +35,22 @@ const ANTHROPIC_ENDPOINT = 'https://api.anthropic.com/v1/messages';
 const DEFAULT_ANTHROPIC_VERSION = '2023-06-01';
 const MAX_TOKENS = 4096;
 
+interface AnthropicTextBlock {
+  type: string;
+  text?: string;
+}
+
+interface AnthropicResponse {
+  content?: AnthropicTextBlock[];
+  error?: { message?: string };
+  status?: number;
+}
+
 /**
  * Parse JSON from Anthropic response text.
  * Handles potential markdown fences that some models may include.
  */
-function parseAnthropicJson(text: string): { ok: true; data: any } | { ok: false; error: unknown; raw: { text: string; candidates: string[] } } {
+function parseAnthropicJson(text: string): { ok: true; data: unknown } | { ok: false; error: unknown; raw: { text: string; candidates: string[] } } {
   const trimmed = text.trim();
   const candidates: string[] = [];
 
@@ -61,7 +72,7 @@ function parseAnthropicJson(text: string): { ok: true; data: any } | { ok: false
   let lastError: unknown;
   for (const candidate of candidates) {
     try {
-      const data = JSON.parse(candidate);
+      const data = JSON.parse(candidate) as unknown;
       return { ok: true, data };
     } catch (error) {
       lastError = error;
@@ -118,34 +129,34 @@ export async function callAnthropicClient(params: AnthropicParams): Promise<AiRe
       throw: false,
     };
 
-    const timeoutPromise = new Promise((_, reject) => {
+    const timeoutPromise = new Promise<never>((_, reject) => {
       setTimeout(() => {
-        const error: any = new Error("Request timed out");
+        const error = new Error("Request timed out");
         error.name = "AbortError"; // Mimic DOMException for compatibility if check uses that
         reject(error);
       }, TIMEOUT_MS);
     });
 
     // Use requestUrl to bypass CORS (runs in Node context in Obsidian)
-    const response = (await Promise.race([
+    const response = await Promise.race([
       requestUrl(requestParams),
       timeoutPromise,
-    ])) as any;
+    ]);
 
     if (response.status >= 400) {
-      const errorPayload = response.json;
+      const errorPayload = response.json as AnthropicResponse;
       return {
         ok: false,
-        error: errorPayload?.error?.message || `Anthropic API HTTP ${response.status}`,
+        error: errorPayload?.error?.message ?? `Anthropic API HTTP ${response.status}`,
         errorType: 'api',
         raw: errorPayload,
         model,
       };
     }
 
-    let parsed: any;
+    let parsed: AnthropicResponse;
     try {
-      parsed = response.json;
+      parsed = response.json as AnthropicResponse;
     } catch (cause) {
       return {
         ok: false,
@@ -159,7 +170,7 @@ export async function callAnthropicClient(params: AnthropicParams): Promise<AiRe
     // Anthropic response structure: content[0].text
     const content = parsed?.content;
     const textBlock = Array.isArray(content)
-      ? content.find((block: any) => block.type === 'text')
+      ? content.find((block: AnthropicTextBlock) => block.type === 'text')
       : null;
     const text = textBlock?.text;
 
@@ -176,7 +187,7 @@ export async function callAnthropicClient(params: AnthropicParams): Promise<AiRe
     // Prepend the '{' we used as prefill since it's not in the response
     const fullJson = '{' + text;
     const parsedResult = parseAnthropicJson(fullJson);
-    
+
     if (!parsedResult.ok) {
       return {
         ok: false,
@@ -190,7 +201,8 @@ export async function callAnthropicClient(params: AnthropicParams): Promise<AiRe
 
     return { ok: true, data: parsedResult.data, raw: parsed, model };
   } catch (cause) {
-    if (isTimeoutError(cause) || (cause as any).name === 'AbortError') {
+    const causeError = cause instanceof Error ? cause : null;
+    if (isTimeoutError(cause) || causeError?.name === 'AbortError') {
       const timeoutSec = Math.round(TIMEOUT_MS / 1000);
       return {
         ok: false,

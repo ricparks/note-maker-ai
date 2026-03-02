@@ -31,7 +31,11 @@
 /**
  * Utility to wrap fetch with a configurable timeout using AbortController.
  * If timeoutMs is not provided, behaves like normal fetch (no timeout).
+ *
+ * Note: This file intentionally uses the native `fetch` API (with AbortController for timeouts)
+ * rather than Obsidian's `requestUrl`, because `requestUrl` does not support request cancellation.
  */
+/* eslint-disable no-restricted-globals */
 export async function fetchWithTimeout(
   url: string,
   options: RequestInit,
@@ -54,6 +58,7 @@ export async function fetchWithTimeout(
     clearTimeout(timeoutId);
   }
 }
+/* eslint-enable no-restricted-globals */
 
 /**
  * Check if an error is an AbortError (timeout).

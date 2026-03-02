@@ -186,3 +186,8 @@ If your plugin does not need CSS, delete this file.
 .notemaker-llm-remove-btn {
 	margin-left: auto;
 }
+
+/* Utility: hidden element (replaces inline style.display = "none") */
+.notemaker-hidden {
+	display: none !important;
+}

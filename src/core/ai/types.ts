@@ -31,8 +31,8 @@ export type AiErrorType = 'network' | 'api' | 'parse' | 'structure' | 'unknown';
 
 export interface AiSuccess {
   ok: true;
-  data: any;      // Parsed JSON object returned by the model
-  raw: any;       // Raw response JSON (already parsed from response.json())
+  data: unknown;      // Parsed JSON object returned by the model
+  raw: unknown;       // Raw response JSON (already parsed from response.json())
   model?: string; // Model identifier used
 }
 
@@ -40,7 +40,7 @@ export interface AiFailure {
   ok: false;
   error: string;      // Human readable error message (no UI side-effects here)
   errorType: AiErrorType;
-  raw?: any;          // Raw partial response for debugging
+  raw?: unknown;          // Raw partial response for debugging
   cause?: unknown;    // Underlying thrown value
   model?: string;
 }

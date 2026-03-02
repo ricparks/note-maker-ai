@@ -27,7 +27,7 @@
  *
  * =========================================================================
  */
-import { AbstractInputSuggest, App, TFile, TFolder, Vault } from 'obsidian';
+import { AbstractInputSuggest, App, TFile, TFolder } from 'obsidian';
 
 /**
  * Inline folder suggester attached to an input element. Shows a dropdown of vault folders
@@ -46,12 +46,14 @@ export class FolderSuggest extends AbstractInputSuggest<string> {
   }
 
   private loadFolders() {
-    const vault = this.app.vault as Vault;
+    const vault = this.app.vault;
+    const configDir = vault.configDir;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
     const root = (vault as any).getRoot?.() as TFolder | undefined;
     const result: string[] = [];
     if (root) {
       const walk = (folder: TFolder) => {
-        if (folder.path.startsWith('.obsidian')) return;
+        if (folder.path.startsWith(configDir)) return;
         result.push(folder.path);
         for (const child of folder.children) {
           if (child instanceof TFolder) walk(child);
@@ -62,10 +64,11 @@ export class FolderSuggest extends AbstractInputSuggest<string> {
       const files = vault.getAllLoadedFiles();
       const set = new Set<string>();
       for (const f of files) {
-        const parent = (f as TFile).parent;
+        if (!(f instanceof TFile)) continue;
+        const parent = f.parent;
         if (parent) {
           const p = parent.path;
-          if (!p.startsWith('.obsidian')) set.add(p);
+          if (!p.startsWith(configDir)) set.add(p);
         }
       }
       result.push(...Array.from(set).sort());

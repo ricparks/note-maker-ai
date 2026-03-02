@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2026 The Application Foundry, LLC 
+ * Copyright (C) 2026 The Application Foundry, LLC
  *
  * This file is part of NoteMakerAI.
  *
@@ -23,7 +23,7 @@
  * If you wish to use this software in a proprietary product or are unable
  * to comply with the terms of the AGPLv3, a commercial license is available.
  *
- * For commercial licensing inquiries, please contact: license@theapplicationfoundry.com 
+ * For commercial licensing inquiries, please contact: license@theapplicationfoundry.com
  *
  * =========================================================================
  */
@@ -47,6 +47,52 @@ export interface PreparedImageOptions {
   orientation?: ReducedImageOrientation;
   rotationDirection?: RotationDirection;
   progressReporter?: ProgressReporter;
+}
+
+/** Minimal typed interface for the exifr module's parsed output */
+interface ExifrParsed {
+  DateTimeOriginal?: Date | string;
+  dateTimeOriginal?: Date | string;
+  CreateDate?: Date | string;
+  CreateDateTime?: Date | string;
+  latitude?: number;
+  longitude?: number;
+  GPSLatitude?: number;
+  GPSLongitude?: number;
+  altitude?: number;
+  GPSAltitude?: number;
+  Orientation?: number;
+  orientation?: number;
+  Make?: string;
+  make?: string;
+  Model?: string;
+  model?: string;
+  LensModel?: string;
+  lensModel?: string;
+  FocalLength?: number | string;
+  focalLength?: number | string;
+  ExposureTime?: number | string;
+  exposureTime?: number | string;
+  FNumber?: number | string;
+  fNumber?: number | string;
+  ISO?: number;
+  iso?: number;
+}
+
+interface ExifrGps {
+  latitude?: number;
+  longitude?: number;
+}
+
+/** Minimal typed interface for the exifr module */
+interface ExifrModule {
+  parse(input: ArrayBuffer, options?: Record<string, boolean>): Promise<ExifrParsed | null>;
+  gps(input: ArrayBuffer): Promise<ExifrGps | null>;
+}
+
+/** Minimal typed interface for Obsidian Vault with undocumented createBinary */
+interface VaultWithCreateBinary {
+  createBinary(path: string, data: ArrayBuffer): Promise<TFile>;
 }
 
 /**
@@ -137,16 +183,16 @@ export class PreparedImage {
     // Check for explicit rotation requirement
     let effectiveW = w;
     let effectiveH = h;
-    let rotate = false; 
+    let rotate = false;
 
     if (this.orientation === 'landscape' && h > w) {
-        effectiveW = h;
-        effectiveH = w;
-        rotate = true;
+      effectiveW = h;
+      effectiveH = w;
+      rotate = true;
     } else if (this.orientation === 'portrait' && w > h) {
-        effectiveW = h;
-        effectiveH = w;
-        rotate = true;
+      effectiveW = h;
+      effectiveH = w;
+      rotate = true;
     }
 
     const { targetW, targetH, needsResize } = this.computeScaledDims(effectiveW, effectiveH, this.maxW, this.maxH);
@@ -161,10 +207,10 @@ export class PreparedImage {
     this.reportProgress(`Resizing/Rotating image to fit within ${this.maxW}×${this.maxH}...`);
     try {
       this.preparedBuf = await this.resizeToJpeg(
-        this.originalBuf, 
-        targetW, 
-        targetH, 
-        0.9, 
+        this.originalBuf,
+        targetW,
+        targetH,
+        0.9,
         rotate ? (this.rotationDirection === 'counter-clockwise' ? 'ccw' : 'cw') : 'none'
       );
       this.preparedWidth = targetW; this.preparedHeight = targetH;
@@ -201,7 +247,7 @@ export class PreparedImage {
       }
 
       this.reportProgress('Moving image into photos directory.');
-      
+
       // Try to move, handling collisions
       let counter = 1;
       while (counter < MAX_COLLISION_ATTEMPTS) {
@@ -209,27 +255,28 @@ export class PreparedImage {
         const suffix = counter === 1 ? '' : ` ${counter}`;
         const candidateName = `${baseName}${suffix}.${this.sourceFile.extension}`;
         const candidatePath = normalizePath(`${photosDir}/${candidateName}`);
-        
+
         // Soft check via cache
         if (this.app.vault.getAbstractFileByPath(candidatePath)) {
-            counter++;
-            continue;
+          counter++;
+          continue;
         }
 
         try {
-            await this.app.fileManager.renameFile(this.sourceFile, candidatePath);
-            // Verify success
-            const moved = this.app.vault.getAbstractFileByPath(candidatePath) as TFile | null;
-            if (!moved) throw new Error('move-failed-verification');
-            this.persistedFile = moved;
-            return this.persistedFile;
-        } catch (error: any) {
-            if (error.message && error.message.includes('File already exists')) {
-                this.reportProgress(`Collision moving to ${candidateName}, retrying...`);
-                counter++;
-                continue;
-            }
-            throw error;
+          await this.app.fileManager.renameFile(this.sourceFile, candidatePath);
+          // Verify success
+          const moved = this.app.vault.getAbstractFileByPath(candidatePath);
+          if (!(moved instanceof TFile)) throw new Error('move-failed-verification');
+          this.persistedFile = moved;
+          return this.persistedFile;
+        } catch (error) {
+          const msg = error instanceof Error ? error.message : String(error);
+          if (msg.includes('File already exists')) {
+            this.reportProgress(`Collision moving to ${candidateName}, retrying...`);
+            counter++;
+            continue;
+          }
+          throw error;
         }
       }
       throw new Error(`Failed to move image after ${MAX_COLLISION_ATTEMPTS} collision attempts`);
@@ -238,40 +285,41 @@ export class PreparedImage {
     // PATH 2: RESIZE/WRITE - Image was resized in memory, write as new JPEG
     // Uses different naming pattern ("-resized" suffix) to distinguish from moved originals
 
-
     // Defensive guard: ensurePrepared() must be called before writeFile() when resizing
     if (!this.preparedBuf) throw new Error('prepared-buffer-missing');
-    
+
     let counter = 1;
     while (counter < MAX_COLLISION_ATTEMPTS) {
-        // Collision-safe naming for resized images: photo.jpg, then photo-resized.jpg, photo-resized-2.jpg, etc.
-        let candidateName = `${baseName}.jpg`;
-        if (counter === 2) candidateName = `${baseName}-resized.jpg`;
-        else if (counter > 2) candidateName = `${baseName}-resized-${counter - 1}.jpg`;
+      // Collision-safe naming for resized images: photo.jpg, then photo-resized.jpg, photo-resized-2.jpg, etc.
+      let candidateName = `${baseName}.jpg`;
+      if (counter === 2) candidateName = `${baseName}-resized.jpg`;
+      else if (counter > 2) candidateName = `${baseName}-resized-${counter - 1}.jpg`;
 
-        const finalPath = normalizePath(`${photosDir}/${candidateName}`);
-        
-        // Soft check
-        if (this.app.vault.getAbstractFileByPath(finalPath)) {
-            counter++;
-            continue;
-        }
+      const finalPath = normalizePath(`${photosDir}/${candidateName}`);
 
-        this.reportProgress(`Writing JPEG: ${candidateName} (${this.preparedWidth}×${this.preparedHeight}).`);
-        
-        try {
-             // @ts-ignore createBinary exists at runtime
-            const created = await (this.app.vault as any).createBinary(finalPath, this.preparedBuf);
-            this.persistedFile = created as TFile;
-            return this.persistedFile;
-        } catch (error: any) {
-             if (error.message && error.message.includes('File already exists')) {
-                this.reportProgress(`Collision writing ${candidateName}, retrying...`);
-                counter++;
-                continue;
-            }
-            throw error;
+      // Soft check
+      if (this.app.vault.getAbstractFileByPath(finalPath)) {
+        counter++;
+        continue;
+      }
+
+      this.reportProgress(`Writing JPEG: ${candidateName} (${this.preparedWidth}×${this.preparedHeight}).`);
+
+      try {
+        // createBinary is an undocumented Obsidian Vault method available at runtime
+        const vault = this.app.vault as unknown as VaultWithCreateBinary;
+        const created = await vault.createBinary(finalPath, this.preparedBuf);
+        this.persistedFile = created;
+        return this.persistedFile;
+      } catch (error) {
+        const msg = error instanceof Error ? error.message : String(error);
+        if (msg.includes('File already exists')) {
+          this.reportProgress(`Collision writing ${candidateName}, retrying...`);
+          counter++;
+          continue;
         }
+        throw error;
+      }
     }
     throw new Error(`Failed to write image after ${MAX_COLLISION_ATTEMPTS} collision attempts`);
   }
@@ -283,7 +331,7 @@ export class PreparedImage {
   async deleteOriginal(): Promise<void> {
     if (!this.keepOriginal && this.needsResize) {
       try {
-        await this.app.vault.delete(this.sourceFile);
+        await this.app.fileManager.trashFile(this.sourceFile);
         this.reportProgress('Deleted original image.');
       } catch (e) {
         this.reportError('Failed to delete original image.');
@@ -302,7 +350,7 @@ export class PreparedImage {
     if (this.aiBase64) return this.aiBase64;
     if (!this.originalBuf && !this.preparedBuf) throw new Error('ensurePrepared must be called first');
 
-    const buf = this.preparedBuf || this.originalBuf!;
+    const buf = this.preparedBuf ?? this.originalBuf!;
     const { w, h } = await this.measure(buf);
     const maxDim = Math.max(w, h);
     if (maxDim <= this.aiMax) {
@@ -324,7 +372,7 @@ export class PreparedImage {
   async renameTo(baseNoExt: string): Promise<TFile> {
     if (!this.persistedFile) throw new Error('rename requires writeFile() first');
     const photosDir = normalizePath(this.photosDir);
-    const safeBase = baseNoExt.replace(/[^a-z0-9_\-]/gi, '_').replace(/_+/g, '_').toLowerCase();
+    const safeBase = baseNoExt.replace(/[^a-z0-9_-]/gi, '_').replace(/_+/g, '_').toLowerCase();
     let candidate = `${safeBase}.jpg`;
     let n = 2;
     while (this.app.vault.getAbstractFileByPath(`${photosDir}/${candidate}`)) {
@@ -335,9 +383,9 @@ export class PreparedImage {
     if (this.persistedFile.path === desiredPath) return this.persistedFile;
     this.reportProgress(`Renaming photo to ${candidate}...`);
     await this.app.fileManager.renameFile(this.persistedFile, desiredPath);
-    const renamed = this.app.vault.getAbstractFileByPath(desiredPath) as TFile | null;
-    if (renamed) this.persistedFile = renamed;
-    return this.persistedFile!;
+    const renamed = this.app.vault.getAbstractFileByPath(desiredPath);
+    if (renamed instanceof TFile) this.persistedFile = renamed;
+    return this.persistedFile;
   }
 
   getNoteBase64(): string {
@@ -357,13 +405,13 @@ export class PreparedImage {
     if (!this.originalBuf) throw new Error('ensurePrepared must be called first');
     try {
       // Dynamically import to keep startup light; bundled by esbuild for production
-      const exifr: any = await import('exifr');
+      const exifr = await import('exifr') as ExifrModule;
       // Include XMP to catch GPS written in XMP blocks by some tools
       const raw = await exifr.parse(this.originalBuf, { tiff: true, ifd0: true, exif: true, gps: true, xmp: true });
       if (!raw || typeof raw !== 'object') {
         this.exifData = null; return null;
       }
-      const dto = raw.DateTimeOriginal || raw.dateTimeOriginal || raw.CreateDate || raw.CreateDateTime;
+      const dto = raw.DateTimeOriginal ?? raw.dateTimeOriginal ?? raw.CreateDate ?? raw.CreateDateTime;
       const dateTimeOriginal = dto instanceof Date ? dto.toISOString() : (dto ? String(dto) : null);
       let latitude: number | null | undefined = typeof raw.latitude === 'number' ? raw.latitude : (raw.GPSLatitude ?? null);
       let longitude: number | null | undefined = typeof raw.longitude === 'number' ? raw.longitude : (raw.GPSLongitude ?? null);
@@ -375,7 +423,7 @@ export class PreparedImage {
             latitude = gps.latitude;
             longitude = gps.longitude;
           }
-        } catch {/* ignore fallback errors */}
+        } catch { /* ignore fallback errors */ }
       }
 
       const exif: ExifData = {
@@ -383,13 +431,13 @@ export class PreparedImage {
         longitude: longitude ?? null,
         altitude: raw.altitude ?? raw.GPSAltitude ?? null,
         orientation: raw.Orientation ?? raw.orientation ?? null,
-        make: raw.Make || raw.make || '',
-        model: raw.Model || raw.model || '',
-        lensModel: raw.LensModel || raw.lensModel || '',
-        focalLength: raw.FocalLength || raw.focalLength || null,
-        exposureTime: raw.ExposureTime || raw.exposureTime || null,
-        fNumber: raw.FNumber || raw.fNumber || null,
-        iso: raw.ISO || raw.iso || null,
+        make: raw.Make ?? raw.make ?? '',
+        model: raw.Model ?? raw.model ?? '',
+        lensModel: raw.LensModel ?? raw.lensModel ?? '',
+        focalLength: raw.FocalLength ?? raw.focalLength ?? null,
+        exposureTime: raw.ExposureTime ?? raw.exposureTime ?? null,
+        fNumber: raw.FNumber ?? raw.fNumber ?? null,
+        iso: raw.ISO ?? raw.iso ?? null,
         dateTimeOriginal
       };
       this.exifData = exif;
@@ -426,7 +474,7 @@ export class PreparedImage {
     const { canvas, ctx } = this.makeCanvas(targetW, targetH);
     await this.withObjectUrl(sourceBuffer, (url) => new Promise<void>((resolve, reject) => {
       const img = new Image();
-      img.onload = () => { 
+      img.onload = () => {
         if (rotate === 'cw' || rotate === true) {
           ctx.translate(targetW, 0);
           ctx.rotate(Math.PI / 2);
@@ -436,9 +484,9 @@ export class PreparedImage {
           ctx.rotate(-Math.PI / 2);
           ctx.drawImage(img, 0, 0, targetH, targetW);
         } else {
-          ctx.drawImage(img, 0, 0, targetW, targetH); 
+          ctx.drawImage(img, 0, 0, targetW, targetH);
         }
-        resolve(); 
+        resolve();
       };
       img.onerror = reject; img.src = url;
     }));
@@ -453,7 +501,7 @@ export class PreparedImage {
       const fallback = canvas.toDataURL('image/jpeg', quality);
       const part = fallback.split(',')[1];
       const fb = Uint8Array.from(atob(part), c => c.charCodeAt(0));
-      return fb.buffer as ArrayBuffer;
+      return fb.buffer;
     }
     return buf;
   }
@@ -461,8 +509,9 @@ export class PreparedImage {
   private toBase64(buffer: ArrayBuffer | Uint8Array): string {
     const bytes = buffer instanceof ArrayBuffer ? new Uint8Array(buffer) : buffer;
     if (bytes.byteLength === 0) return '';
-    if (typeof Buffer !== 'undefined' && typeof (Buffer as any).from === 'function') {
-      return (Buffer as any).from(bytes).toString('base64');
+    // Use Node.js Buffer if available (Obsidian desktop/mobile run in Node context)
+    if (typeof Buffer !== 'undefined') {
+      return Buffer.from(bytes).toString('base64');
     }
     const chunkSize = 0x8000;
     let binary = '';

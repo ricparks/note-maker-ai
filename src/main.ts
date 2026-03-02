@@ -27,11 +27,12 @@
  *
  * =========================================================================
  */
-import { Plugin, setIcon } from 'obsidian';
+import { Plugin, Notice } from 'obsidian';
+import type { EventRef } from 'obsidian';
 import { NoteMakerAISettingTab } from './ui/settings/NoteMakerAISettingTab';
 import { SettingsManager } from './settings/SettingsManager';
 import type { NoteMakerAISettings } from './settings/schema';
-import { RIBBON_ICON, RIBBON_TITLE } from './utils/constants';
+import { RIBBON_ICON } from './utils/constants';
 import { SubjectRegistry } from './core/subject';
 import { NoteMakerCore } from './core/NoteMakerCore';
 import * as SubjectLoader from './core/subject/SubjectLoader';
@@ -115,14 +116,15 @@ export default class NoteMakerAI extends Plugin {
     private waitForVaultReady(): Promise<void> {
         return new Promise((resolve) => {
             // Check if metadataCache is already resolved
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
             if ((this.app.metadataCache as any).initialized) {
                 Logger.info("[NoteMakerAI] Metadata cache already initialized.");
                 resolve();
                 return;
             }
-            
-            let eventRef: any = null;
-            let timer: any = null;
+
+            let eventRef: EventRef | null = null;
+            let timer: ReturnType<typeof setTimeout> | null = null;
 
             const cleanup = () => {
                 if (eventRef) this.app.metadataCache.offref(eventRef);
@@ -155,7 +157,7 @@ export default class NoteMakerAI extends Plugin {
         
         if (subjects.length === 0) {
             Logger.info("[NoteMakerAI] No subjects configured.");
-            new (require('obsidian').Notice)("NoteMaker AI: No Subject Definition File configured. Please set one in Settings.");
+            new Notice("No subject definition file configured. Open NoteMaker AI settings to configure one.");
             return;
         }
 
@@ -213,7 +215,7 @@ export default class NoteMakerAI extends Plugin {
             const title = subject.definition.ribbonTitle || `Create ${subject.name}`;
             
             const ribbonEl = this.addRibbonIcon(icon, title, () => {
-                this.core.processSelection(subject);
+                void this.core.processSelection(subject);
             });
             this.ribbonEls.push(ribbonEl);
         }

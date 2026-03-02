@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2026 The Application Foundry, LLC 
+ * Copyright (C) 2026 The Application Foundry, LLC
  *
  * This file is part of NoteMakerAI.
  *
@@ -23,11 +23,12 @@
  * If you wish to use this software in a proprietary product or are unable
  * to comply with the terms of the AGPLv3, a commercial license is available.
  *
- * For commercial licensing inquiries, please contact: license@theapplicationfoundry.com 
+ * For commercial licensing inquiries, please contact: license@theapplicationfoundry.com
  *
  * =========================================================================
  */
-import { stringifyYaml } from 'obsidian';
+import { stringifyYaml, TFile } from 'obsidian';
+import { Logger } from '../../utils/logger';
 import { SubjectDefinition, SubjectInfoBase, SubjectNoteData, SubjectExistingNoteContext, SubjectPromptContext } from './types';
 import { SubjectDefinitionFile } from './file_schema';
 
@@ -50,7 +51,7 @@ export class FileDefinedSubject implements SubjectDefinition<SubjectInfoBase> {
     this.ribbonTitle = `Create ${definition.subject_name} note`;
     this.validateSubject = definition.validate_subject ?? false;
     this.validationThreshold = definition.validation_threshold;
-    
+
     // We construct the static part of the prompt here or in getPrompt
     this.prompt = this.buildBasePrompt();
   }
@@ -66,7 +67,7 @@ export class FileDefinedSubject implements SubjectDefinition<SubjectInfoBase> {
   private buildBasePrompt(): string {
     const { lead_prompt, properties, sections, trailing_prompt } = this.definition;
 
-    // prompt properties: strictly exclude ones that have a default. 
+    // prompt properties: strictly exclude ones that have a default.
     // If a default is set, we use it locally. We never ask the AI for it, even if an instruction is present.
     const promptProperties = properties.filter(p => p.default === undefined && p.instruction);
 
@@ -81,9 +82,9 @@ export class FileDefinedSubject implements SubjectDefinition<SubjectInfoBase> {
     // Filter out sections that are marked as user-only via {{my_notes}}
     const promptSections = sections.filter(s => !s.instruction?.includes('{{my_notes}}'));
     const sectionsList = promptSections.map(s => `- ${s.heading}: ${s.instruction}`).join('\n');
-    
+
     // We also construct a robust JSON example dynamically to help the LLM structure correctly
-    const exampleObj: Record<string, any> = {};
+    const exampleObj: Record<string, unknown> = {};
     promptProperties.forEach(p => {
       if (p.type === 'sequence' || p.type === 'list' || p.type === 'array') {
         exampleObj[p.key] = ["...", "..."];
@@ -91,13 +92,8 @@ export class FileDefinedSubject implements SubjectDefinition<SubjectInfoBase> {
         exampleObj[p.key] = "...";
       }
     });
-    promptSections.forEach(s => exampleObj[s.heading] = "...");
-    
-    // Combine standard meta fields that are always requested in trailing_prompt
-    // (Note: trailing_prompt in the file already contains specific JSON requirements/examples, 
-    // but we inject the specific fields list to be sure).
+    promptSections.forEach(s => { exampleObj[s.heading] = "..."; });
 
-    
     const exampleJson = JSON.stringify(exampleObj, null, 2);
 
     let base = `${lead_prompt}
@@ -127,14 +123,14 @@ ${trailing_prompt || ''}`;
     let finalPrompt = this.prompt;
 
     // Inject EXIF Metadata if available
-    console.log(`[FileDefinedSubject.getPrompt] context.exifData present: ${!!context.exifData}`);
+    Logger.debug(`[FileDefinedSubject.getPrompt] context.exifData present: ${!!context.exifData}`);
     if (context.exifData) {
-      console.log(`[FileDefinedSubject.getPrompt] EXIF data received:`, context.exifData);
+      Logger.debug(`[FileDefinedSubject.getPrompt] EXIF data received:`, context.exifData);
       const e = context.exifData;
       const parts: string[] = [];
 
       if (e.dateTimeOriginal) parts.push(`Date Taken: ${e.dateTimeOriginal}`);
-      
+
       // Location
       if (e.latitude && e.longitude) {
         parts.push(`GPS Location: ${e.latitude.toFixed(6)}, ${e.longitude.toFixed(6)}`);
@@ -154,16 +150,16 @@ ${trailing_prompt || ''}`;
       if (e.iso) settings.push(`ISO ${e.iso}`);
       if (settings.length > 0) parts.push(`Settings: ${settings.join(' ')}`);
 
-      console.log(`[FileDefinedSubject.getPrompt] EXIF parts to inject:`, parts);
+      Logger.debug(`[FileDefinedSubject.getPrompt] EXIF parts to inject:`, parts);
       if (parts.length > 0) {
         const exifBlock = `\n\n[Context Data from Image Metadata]\n${parts.join('\n')}\nWe have provided this metadata to help you be more accurate. You can use it to derive location, time of day, or date context.`;
-        console.log(`[FileDefinedSubject.getPrompt] Appending EXIF block to prompt`);
+        Logger.debug(`[FileDefinedSubject.getPrompt] Appending EXIF block to prompt`);
         finalPrompt += exifBlock;
       } else {
-        console.log(`[FileDefinedSubject.getPrompt] No EXIF parts generated (all fields empty/undefined)`);
+        Logger.debug(`[FileDefinedSubject.getPrompt] No EXIF parts generated (all fields empty/undefined)`);
       }
     } else {
-      console.log(`[FileDefinedSubject.getPrompt] No EXIF data in context`);
+      Logger.debug(`[FileDefinedSubject.getPrompt] No EXIF data in context`);
     }
 
     // Handle Redo / Prompt Additions
@@ -180,9 +176,9 @@ ${trailing_prompt || ''}`;
   /**
    * Simple templating engine: replaces {{key}} with value from info.fields.
    */
-  private applyTemplate(template: string, info: SubjectInfoBase, context?: { originalImage?: any }): { result: string; usedOriginalImage: boolean } {
+  private applyTemplate(template: string, info: SubjectInfoBase, context?: { originalImage?: TFile }): { result: string; usedOriginalImage: boolean } {
     let usedOriginalImage = false;
-    const result = template.replace(/\{\{([^}]+)\}\}/g, (match, key) => {
+    const result = template.replace(/\{\{([^}]+)\}\}/g, (match, key: string) => {
       // Special case: {{original_image}}
       if (key === 'original_image') {
         if (context?.originalImage) {
@@ -198,13 +194,15 @@ ${trailing_prompt || ''}`;
         const val = info.fields[key];
         // Ensure we don't treat false or 0 as empty string
         if (val === undefined || val === null) return '';
-        return String(val);
+        if (typeof val === 'object') return JSON.stringify(val);
+        if (typeof val === 'string' || typeof val === 'number' || typeof val === 'boolean') return String(val);
+        return '';
       }
       // Check in base info (title, producer)
       if (key === 'title') return info.title;
       if (key === 'producer') return info.producer || '';
       if (key === 'sdf_version') return this.definition.sdf_version || '';
-      
+
       return ''; // Fallback to empty
     });
     return { result, usedOriginalImage };
@@ -218,10 +216,10 @@ ${trailing_prompt || ''}`;
       .replace(/[\s_]+/g, '_') // collapse spaces/underscores
       .toLowerCase();
   }
-  
+
   private sanitizeFilename(text: string): string {
-     // Conservative filename sanitizer for OS compatibility
-     return text.replace(/[\\/:"*?<>|]+/g, '').trim(); 
+    // Conservative filename sanitizer for OS compatibility
+    return text.replace(/[\\/:"*?<>|]+/g, '').trim();
   }
 
   getNoteFilename(info: SubjectInfoBase): string {
@@ -238,41 +236,44 @@ ${trailing_prompt || ''}`;
     return this.slugify(raw) || 'image';
   }
 
-  parse(aiJson: any, context?: { originalImage?: any }): SubjectInfoBase {
+  parse(aiJson: unknown, context?: { originalImage?: TFile }): SubjectInfoBase {
     // Pass-through parsing. We trust the keys match what we asked for.
     // We try to identify 'title' and 'producer' (author) for the Base system.
-    
+    const jsonObj = aiJson as Record<string, unknown>;
+
     // Heuristic: finding the "title" property
     // We look for a property explicitly named 'title', or the first property in the list.
     const titleKey = this.definition.properties.find(p => p.key.toLowerCase() === 'title')?.key || 'title';
-    const title = aiJson[titleKey] || 'Untitled';
+    const title = jsonObj[titleKey] ?? 'Untitled';
 
     // Heuristic: finding the "producer" (author) property
     // Look for 'author', 'producer', or just use empty.
-    const producerKey = this.definition.properties.find(p => 
+    const producerKey = this.definition.properties.find(p =>
       p.key.toLowerCase() === 'author' || p.key.toLowerCase() === 'producer'
     )?.key;
-    const producer = producerKey ? aiJson[producerKey] : '';
+    const producer = producerKey ? jsonObj[producerKey] : '';
 
+    const titleStr = typeof title === 'string' ? title : (title != null ? JSON.stringify(title) : 'Untitled');
+    const producerStr = typeof producer === 'string' ? producer : (producer != null ? JSON.stringify(producer) : '');
     const result: SubjectInfoBase = {
-      title: String(title),
-      producer: String(producer),
+      title: titleStr,
+      producer: producerStr,
       raw: aiJson,
-      fields: aiJson,
+      fields: { ...jsonObj },
       _usedOriginalImagePlaceholder: false
     };
 
     // Inject defaults for any missing keys
     for (const prop of this.definition.properties) {
       if (prop.default !== undefined && (result.fields[prop.key] === undefined || result.fields[prop.key] === null || result.fields[prop.key] === "")) {
-        let defVal = prop.default;
+        let defVal: unknown = prop.default;
         if (typeof defVal === 'string') {
-           // Apply templates to the default value (e.g. "{{sdf_version}}", "{{original_image}}")
-           const { result: val, usedOriginalImage } = this.applyTemplate(defVal, result, context);
-           defVal = val;
-           if (usedOriginalImage) {
-             result._usedOriginalImagePlaceholder = true;
-           }
+          // Apply templates to the default value (e.g. "{{sdf_version}}", "{{original_image}}")
+          const { result: val, usedOriginalImage } = this.applyTemplate(defVal, result, context);
+          defVal = val;
+          if (usedOriginalImage) {
+            result._usedOriginalImagePlaceholder = true;
+          }
         }
         result.fields[prop.key] = defVal;
       }
@@ -281,20 +282,20 @@ ${trailing_prompt || ''}`;
     return result;
   }
 
-  getNoteParts(info: SubjectInfoBase, context: { coverFileName?: string; llmModel?: string }): { frontmatter: Record<string, any>; body: string } {
+  getNoteParts(info: SubjectInfoBase, context: { coverFileName?: string; llmModel?: string }): { frontmatter: Record<string, unknown>; body: string } {
     const { properties, sections } = this.definition;
-    const fields = info.fields as Record<string, any>;
+    const fields = info.fields;
 
     // 1. Build Frontmatter Object
-    const frontmatterObj: Record<string, any> = {};
-    
+    const frontmatterObj: Record<string, unknown> = {};
+
     // Add dynamic properties
     for (const prop of properties) {
-      let val = fields[prop.key];
+      let val: unknown = fields[prop.key];
       // Keep empty strings if that's what we want, or undefined to omit?
       // Legacy behavior: "undefined || null -> ''"
       if (val === undefined || val === null) val = '';
-      
+
       frontmatterObj[prop.key] = val;
     }
 
@@ -318,9 +319,9 @@ ${trailing_prompt || ''}`;
     // Dynamic Sections from Definition
     for (const sec of sections) {
       const heading = sec.heading;
-      
+
       // Look for data in fields (AI JSON) using exact match, then case-insensitive match
-      let content = fields[heading];
+      let content: unknown = fields[heading];
       if (!content) {
         const lowerHeading = heading.toLowerCase();
         const matchingKey = Object.keys(fields).find(k => k.toLowerCase() === lowerHeading);
@@ -330,11 +331,15 @@ ${trailing_prompt || ''}`;
       }
       // For {{my_notes}} sections, content from AI will be undefined/empty (excluded from prompt),
       // which is correct (initially empty).
-      content = content || '';
+      const contentStr = content == null
+        ? ''
+        : typeof content === 'string' || typeof content === 'number' || typeof content === 'boolean'
+          ? String(content)
+          : JSON.stringify(content);
 
       contentLines.push('');
       contentLines.push(`#### ${heading}`);
-      contentLines.push(String(content).trim());
+      contentLines.push(contentStr.trim());
     }
 
     // Embed Image at bottom
@@ -351,45 +356,45 @@ ${trailing_prompt || ''}`;
 
   buildNote(info: SubjectInfoBase, context: { coverFileName?: string; llmModel?: string }): string {
     const { frontmatter, body } = this.getNoteParts(info, context);
-    
+
     // Strategy: Extract boolean values to append manually as "true"/"false" literals,
     // bypassing Obsidian's stringifyYaml which might output "Yes"/"No".
     const booleanFields: Record<string, boolean> = {};
 
     for (const prop of this.definition.properties) {
-       const key = prop.key;
-       let val = frontmatter[key];
-       
-       // Check if this property is supposed to be a boolean
-       const isBoolType = prop.type === 'boolean' || typeof prop.default === 'boolean';
-       
-       if (isBoolType && val !== undefined && val !== null) {
-          // Normalize to boolean if it's currently a string "Yes"/"No"/"true"/"false"
-          if (typeof val === 'string') {
-             const lower = val.toLowerCase();
-             if (lower === 'yes' || lower === 'true' || lower === 'on') val = true;
-             else if (lower === 'no' || lower === 'false' || lower === 'off') val = false;
-          }
-          
-          // If we successfully resolved a boolean, save it and remove from main frontmatter
-          if (typeof val === 'boolean') {
-             booleanFields[key] = val;
-             delete frontmatter[key];
-          }
-       } else if (typeof val === 'boolean') {
-           // Also catch implicit booleans not explicitly defined as such (rare but safer)
-           booleanFields[key] = val;
-           delete frontmatter[key];
-       }
+      const key = prop.key;
+      let val: unknown = frontmatter[key];
+
+      // Check if this property is supposed to be a boolean
+      const isBoolType = prop.type === 'boolean' || typeof prop.default === 'boolean';
+
+      if (isBoolType && val !== undefined && val !== null) {
+        // Normalize to boolean if it's currently a string "Yes"/"No"/"true"/"false"
+        if (typeof val === 'string') {
+          const lower = val.toLowerCase();
+          if (lower === 'yes' || lower === 'true' || lower === 'on') val = true;
+          else if (lower === 'no' || lower === 'false' || lower === 'off') val = false;
+        }
+
+        // If we successfully resolved a boolean, save it and remove from main frontmatter
+        if (typeof val === 'boolean') {
+          booleanFields[key] = val;
+          delete frontmatter[key];
+        }
+      } else if (typeof val === 'boolean') {
+        // Also catch implicit booleans not explicitly defined as such (rare but safer)
+        booleanFields[key] = val;
+        delete frontmatter[key];
+      }
     }
 
     let yamlString = stringifyYaml(frontmatter).trim();
-    
+
     // Manually append the boolean fields
     // This ensures they are always written as `key: true` or `key: false`
     for (const key in booleanFields) {
-        if (yamlString.length > 0) yamlString += '\n';
-        yamlString += `${key}: ${booleanFields[key]}`;
+      if (yamlString.length > 0) yamlString += '\n';
+      yamlString += `${key}: ${booleanFields[key]}`;
     }
 
     return `---\n${yamlString}\n---\n${body}`;
@@ -400,12 +405,12 @@ ${trailing_prompt || ''}`;
   parseExistingNote(note: SubjectExistingNoteContext): SubjectNoteData | Promise<SubjectNoteData> {
     const properties = note.frontmatter || {};
     const sections: Record<string, string> = {};
-    
+
     // Regex-based section parser (Standard markdown headings)
     const lines = note.content.split(/\r?\n/);
     let currentSection: string | null = null;
     let buffer: string[] = [];
-    
+
     for (const line of lines) {
       const match = line.match(/^(#{1,6})\s+(.*)$/);
       if (match) {
@@ -421,7 +426,7 @@ ${trailing_prompt || ''}`;
     if (currentSection) {
       sections[currentSection] = buffer.join('\n').trim();
     }
-    
+
     return {
       properties,
       sections,
@@ -431,7 +436,7 @@ ${trailing_prompt || ''}`;
 
   validateParsedData(info: SubjectInfoBase): string[] {
     const warnings: string[] = [];
-    const fields = info.fields as Record<string, any>;
+    const fields = info.fields;
 
     // Check strict adherence to schema
     for (const prop of this.definition.properties) {
@@ -443,7 +448,7 @@ ${trailing_prompt || ''}`;
         }
       }
     }
-    
+
     return warnings;
   }
 
@@ -459,7 +464,7 @@ ${trailing_prompt || ''}`;
       .map(s => s.heading);
   }
 
-  getPropertyDefinitions(): Array<{ key: string; type?: string; default?: any }> {
+  getPropertyDefinitions(): Array<{ key: string; type?: string; default?: unknown }> {
     return this.definition.properties || [];
   }
 

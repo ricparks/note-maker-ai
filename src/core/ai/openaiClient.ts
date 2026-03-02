@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2026 The Application Foundry, LLC 
+ * Copyright (C) 2026 The Application Foundry, LLC
  *
  * This file is part of NoteMakerAI.
  *
@@ -23,12 +23,28 @@
  * If you wish to use this software in a proprietary product or are unable
  * to comply with the terms of the AGPLv3, a commercial license is available.
  *
- * For commercial licensing inquiries, please contact: license@theapplicationfoundry.com 
+ * For commercial licensing inquiries, please contact: license@theapplicationfoundry.com
  *
  * =========================================================================
  */
 import { AiResult, OpenAIParams } from './types';
 import { fetchWithTimeout, isTimeoutError } from './fetchWithTimeout';
+
+interface OpenAIErrorPayload {
+  error?: { message?: string };
+}
+
+interface OpenAIMessage {
+  content?: string;
+}
+
+interface OpenAIChoice {
+  message?: OpenAIMessage;
+}
+
+interface OpenAIResponse {
+  choices?: OpenAIChoice[];
+}
 
 export async function callOpenAIClient(params: OpenAIParams): Promise<AiResult> {
   const { base64Image, apiKey, model, prompt } = params;
@@ -63,19 +79,19 @@ export async function callOpenAIClient(params: OpenAIParams): Promise<AiResult> 
     }, TIMEOUT_MS);
 
     if (!response.ok) {
-      let errorPayload: any = null;
-      try { errorPayload = await response.json(); } catch {}
+      let errorPayload: OpenAIErrorPayload | null = null;
+      try { errorPayload = await response.json() as OpenAIErrorPayload; } catch { /* ignore parse errors */ }
       return {
         ok: false,
-        error: errorPayload?.error?.message || `OpenAI API HTTP ${response.status}`,
+        error: errorPayload?.error?.message ?? `OpenAI API HTTP ${response.status}`,
         errorType: 'api',
         raw: errorPayload,
         model
       };
     }
 
-    let outer: any;
-    try { outer = await response.json(); } catch (e) {
+    let outer: OpenAIResponse;
+    try { outer = await response.json() as OpenAIResponse; } catch (e) {
       return { ok: false, error: 'Failed to parse OpenAI JSON body', errorType: 'parse', cause: e, model };
     }
 
@@ -85,7 +101,7 @@ export async function callOpenAIClient(params: OpenAIParams): Promise<AiResult> 
     }
 
     try {
-      const data = JSON.parse(content);
+      const data = JSON.parse(content) as unknown;
       return { ok: true, data, raw: outer, model };
     } catch (e) {
       return { ok: false, error: 'OpenAI inner JSON parse error', errorType: 'parse', raw: { outer, content }, cause: e, model };

@@ -28,7 +28,7 @@
  * =========================================================================
  */
 export { type ActiveSubject, type SubjectDefinition, type SubjectInfoBase, type SubjectNoteData, type SubjectExistingNoteContext, type SubjectPromptContext, type SubjectNoteSections } from './types';
-import type { ActiveSubject, SubjectDefinition, SubjectInfoBase } from './types';
+import type { ActiveSubject } from './types';
 
 /**
  * Registry to manage active subject definitions.

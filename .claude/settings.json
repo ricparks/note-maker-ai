@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx eslint --fix-dry-run src/ui/settings/NoteMakerAISettingTab.ts)",
+      "Bash(python3 -c \"import sys,json; data=json.load\\(sys.stdin\\); [print\\(m.get\\(''fix'', {}\\).get\\(''text'', ''''\\), ''|'', m.get\\(''message'', ''''\\)\\) for r in data for m in r.get\\(''messages'', []\\) if m.get\\(''ruleId''\\) == ''obsidianmd/ui/sentence-case'']\")",
+      "Bash(npx eslint --fix-dry-run --format json src/ui/settings/NoteMakerAISettingTab.ts)",
+      "Bash(python3 -c \":*)",
+      "Bash(node -e \" // Check if no-alert blocks window.confirm too // by looking at the rule source \")",
+      "Bash(npx eslint --print-config src/ui/settings/NoteMakerAISettingTab.ts)",
+      "Bash(echo \"Exit code: $?\")"
+    ]
+  }
+}

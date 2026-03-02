@@ -90,7 +90,7 @@ export async function parseSubjectDefinitionFile(app: App, filePath: string, sup
  * Validates the parsed structure of a Subject Definition File.
  * Returns an array of error messages. Empty array means valid.
  */
-function validateSubjectDefinition(def: any): string[] {
+function validateSubjectDefinition(def: SubjectDefinitionFile): string[] {
   const errors: string[] = [];
 
   // 1. Required Top-Level Fields
@@ -103,8 +103,9 @@ function validateSubjectDefinition(def: any): string[] {
     'lead_prompt'
   ];
 
+  const defRecord = def as unknown as Record<string, unknown>;
   for (const field of requiredFields) {
-    if (!def[field]) {
+    if (!defRecord[field]) {
       errors.push(`Missing required field: '${field}'`);
     }
   }
@@ -121,7 +122,7 @@ function validateSubjectDefinition(def: any): string[] {
     errors.push("'properties' must be a list (array).");
   } else {
     const keys = new Set<string>();
-    def.properties.forEach((prop: any, index: number) => {
+    def.properties.forEach((prop, index: number) => {
       if (!prop.key) {
         errors.push(`Property at index ${index} is missing 'key'.`);
         return;
@@ -161,7 +162,7 @@ function validateSubjectDefinition(def: any): string[] {
   if (!Array.isArray(def.sections)) {
     errors.push("'sections' must be a list (array).");
   } else {
-    def.sections.forEach((sec: any, index: number) => {
+    def.sections.forEach((sec, index: number) => {
       if (!sec.heading) errors.push(`Section at index ${index} is missing 'heading'.`);
       if (!sec.instruction) errors.push(`Section at index ${index} ('${sec.heading || 'unknown'}') is missing 'instruction'.`);
     });

@@ -32,7 +32,7 @@ export interface FileDefinedProperty {
   key: string;
   instruction?: string;
   type?: string;
-  default?: any;
+  default?: unknown;
   touch_me_not?: boolean;
 }
 

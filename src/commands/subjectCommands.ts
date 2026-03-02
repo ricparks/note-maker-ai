@@ -38,7 +38,7 @@ export function registerSubjectCommand(plugin: NoteMakerAI, subject: ActiveSubje
         id: cmdId,
         name: `Create note from image (${subject.name})`,
         callback: () => {
-            plugin.core.processSelection(subject);
+            void plugin.core.processSelection(subject);
         }
     });
 }
