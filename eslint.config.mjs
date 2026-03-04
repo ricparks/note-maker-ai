@@ -39,8 +39,13 @@ export default defineConfig([
     },
     rules: {
       "obsidianmd/ui/sentence-case": ["error", {
-        brands: [...DEFAULT_BRANDS, "NoteMaker AI", "NoteMakerAI", "LLM", "LLMs", "SDF", "API"],
+        brands: [...DEFAULT_BRANDS, "NoteMakerAI","LLM", "LLMs", "SDF", "API"],
       }],
     },
+  },
+  {
+    // Logger is the sole wrapper around console — allow console methods here
+    files: ["src/utils/logger.ts"],
+    rules: { "no-console": "off" },
   },
 ]);

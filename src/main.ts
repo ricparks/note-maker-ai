@@ -116,8 +116,7 @@ export default class NoteMakerAI extends Plugin {
     private waitForVaultReady(): Promise<void> {
         return new Promise((resolve) => {
             // Check if metadataCache is already resolved
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
-            if ((this.app.metadataCache as any).initialized) {
+            if ((this.app.metadataCache as { initialized?: boolean }).initialized) {
                 Logger.info("[NoteMakerAI] Metadata cache already initialized.");
                 resolve();
                 return;
@@ -157,7 +156,7 @@ export default class NoteMakerAI extends Plugin {
         
         if (subjects.length === 0) {
             Logger.info("[NoteMakerAI] No subjects configured.");
-            new Notice("No subject definition file configured. Open NoteMaker AI settings to configure one.");
+            new Notice("No subject definition file configured. Open NoteMakerAI settings to configure one.");
             return;
         }
 

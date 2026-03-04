@@ -142,7 +142,7 @@ export class NoteMakerCore {
 	async processSelection(explicitSubject?: import("./subject").ActiveSubject): Promise<void> {
 		const subject = explicitSubject || this.firstSubject;
 		if (!subject) {
-			new Notice("No subject definition file configured. Open NoteMaker AI settings to configure one.");
+			new Notice("No subject definition file configured. Open NoteMakerAI settings to configure one.");
 			return;
 		}
 		
@@ -150,11 +150,11 @@ export class NoteMakerCore {
 
 		// Validate required directories are configured
 		if (!subject.notesDir?.trim()) {
-			new Notice(`Notes folder not configured for "${subject.name}". Open NoteMaker AI settings to configure it.`);
+			new Notice(`Notes folder not configured for "${subject.name}". Open NoteMakerAI settings to configure it.`);
 			return;
 		}
 		if (!subject.photosDir?.trim()) {
-			new Notice(`Photos folder not configured for "${subject.name}". Open NoteMaker AI settings to configure it.`);
+			new Notice(`Photos folder not configured for "${subject.name}". Open NoteMakerAI settings to configure it.`);
 			return;
 		}
 

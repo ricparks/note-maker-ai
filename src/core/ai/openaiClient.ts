@@ -27,8 +27,8 @@
  *
  * =========================================================================
  */
+import { requestUrl, RequestUrlParam } from 'obsidian';
 import { AiResult, OpenAIParams } from './types';
-import { fetchWithTimeout, isTimeoutError } from './fetchWithTimeout';
 
 interface OpenAIErrorPayload {
   error?: { message?: string };
@@ -48,7 +48,6 @@ interface OpenAIResponse {
 
 export async function callOpenAIClient(params: OpenAIParams): Promise<AiResult> {
   const { base64Image, apiKey, model, prompt } = params;
-  const url = 'https://api.openai.com/v1/chat/completions';
   const TIMEOUT_MS = 180000; // 3 minutes
 
   const requestBody = {
@@ -69,18 +68,33 @@ export async function callOpenAIClient(params: OpenAIParams): Promise<AiResult> 
   };
 
   try {
-    const response = await fetchWithTimeout(url, {
+    const requestParams: RequestUrlParam = {
+      url: 'https://api.openai.com/v1/chat/completions',
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${apiKey}`
+        Authorization: `Bearer ${apiKey}`,
       },
-      body: JSON.stringify(requestBody)
-    }, TIMEOUT_MS);
+      body: JSON.stringify(requestBody),
+      throw: false,
+    };
 
-    if (!response.ok) {
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      setTimeout(() => {
+        const error = new Error('Request timed out');
+        error.name = 'AbortError';
+        reject(error);
+      }, TIMEOUT_MS);
+    });
+
+    const response = await Promise.race([
+      requestUrl(requestParams),
+      timeoutPromise,
+    ]);
+
+    if (response.status >= 400) {
       let errorPayload: OpenAIErrorPayload | null = null;
-      try { errorPayload = await response.json() as OpenAIErrorPayload; } catch { /* ignore parse errors */ }
+      try { errorPayload = response.json as OpenAIErrorPayload; } catch { /* ignore parse errors */ }
       return {
         ok: false,
         error: errorPayload?.error?.message ?? `OpenAI API HTTP ${response.status}`,
@@ -91,7 +105,7 @@ export async function callOpenAIClient(params: OpenAIParams): Promise<AiResult> 
     }
 
     let outer: OpenAIResponse;
-    try { outer = await response.json() as OpenAIResponse; } catch (e) {
+    try { outer = response.json as OpenAIResponse; } catch (e) {
       return { ok: false, error: 'Failed to parse OpenAI JSON body', errorType: 'parse', cause: e, model };
     }
 
@@ -107,7 +121,8 @@ export async function callOpenAIClient(params: OpenAIParams): Promise<AiResult> 
       return { ok: false, error: 'OpenAI inner JSON parse error', errorType: 'parse', raw: { outer, content }, cause: e, model };
     }
   } catch (e) {
-    if (isTimeoutError(e)) {
+    const causeError = e instanceof Error ? e : null;
+    if (causeError?.name === 'AbortError') {
       const timeoutSec = Math.round(TIMEOUT_MS / 1000);
       return { ok: false, error: `OpenAI request timed out after ${timeoutSec}s`, errorType: 'network', cause: e, model };
     }

@@ -27,7 +27,6 @@
  *
  * =========================================================================
  */
-/* eslint-disable no-console */
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error' | 'none';
 
 const LEVELS: Record<LogLevel, number> = {

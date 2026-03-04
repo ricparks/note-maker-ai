@@ -48,8 +48,7 @@ export class FolderSuggest extends AbstractInputSuggest<string> {
   private loadFolders() {
     const vault = this.app.vault;
     const configDir = vault.configDir;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
-    const root = (vault as any).getRoot?.() as TFolder | undefined;
+    const root = (vault as { getRoot?: () => TFolder }).getRoot?.();
     const result: string[] = [];
     if (root) {
       const walk = (folder: TFolder) => {

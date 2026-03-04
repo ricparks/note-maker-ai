@@ -129,7 +129,7 @@ export class NoteMakerAISettingTab extends PluginSettingTab {
 				// Definition Path
 				new Setting(card)
 					.setName("Definition file")
-					.setDesc("Path to the subject definition file (SDF).")
+					.setDesc("Path to the subject definition file.")
 					.addText(text => {
 						text.setPlaceholder("e.g. settings/RecipeSubject.md")
 							.setValue(subject.subjectDefinitionPath)
@@ -192,8 +192,8 @@ export class NoteMakerAISettingTab extends PluginSettingTab {
 
 				// LLM Override
 				new Setting(card)
-					.setName("LLM override")
-					.setDesc("Use a specific LLM for this subject (optional).")
+					.setName("AI override")
+					.setDesc("Use a specific AI model for this subject (optional).")
 					.addDropdown(dd => {
 						dd.addOption("", "Default (global setting)");
 						const llms = this.plugin.settings.llms || [];
@@ -237,7 +237,7 @@ export class NoteMakerAISettingTab extends PluginSettingTab {
 			return this.plugin.settings.llms;
 		};
 
-		new Setting(containerEl).setName("LLMs").setHeading();
+		new Setting(containerEl).setName("AI Model").setHeading();
 		containerEl.createEl("hr");
 		const llmWrap = containerEl.createEl("div", {
 			cls: "notemaker-llm-rows",
@@ -297,7 +297,7 @@ export class NoteMakerAISettingTab extends PluginSettingTab {
 			llmWrap.empty();
 			if (llms.length === 0) {
 				const empty = llmWrap.createEl("div");
-				empty.textContent = "No LLMs configured.";
+				empty.textContent = "No AI models configured.";
 				empty.addClass("setting-item-description");
 				return;
 			}
@@ -476,8 +476,8 @@ export class NoteMakerAISettingTab extends PluginSettingTab {
 				};
 
 				const delBtn = row.createEl("button", { text: "×", cls: "notemaker-btn-ghost-danger notemaker-icon-btn notemaker-llm-remove-btn" });
-				delBtn.setAttr("aria-label", "Remove LLM");
-				delBtn.title = "Remove LLM";
+				delBtn.setAttr("aria-label", "Remove A.I. model");
+				delBtn.title = "Remove AI model";
 				delBtn.disabled = llms.length <= 1;
 				delBtn.onclick = () => {
 					void (async () => {
@@ -503,7 +503,7 @@ export class NoteMakerAISettingTab extends PluginSettingTab {
 
 		const addLlmWrap = containerEl.createEl("div", { cls: "notemaker-add-llm-wrap" });
 		const addLlmBtn = addLlmWrap.createEl("button", {
-			text: "Add LLM",
+			text: "Add AI model",
 		});
 		addLlmBtn.addClass("mod-cta");
 		addLlmBtn.onclick = () => {
@@ -528,8 +528,8 @@ export class NoteMakerAISettingTab extends PluginSettingTab {
 		};
 
 		const defaultLlmSetting = new Setting(containerEl)
-			.setName("Default LLM")
-			.setDesc("The fallback LLM to use when a subject does not specify an override.");
+			.setName("Default AI model")
+			.setDesc("The fallback AI model to use when a subject does not specify an override.");
 		defaultLlmSetting.addDropdown((dd) => {
 			const selectEl = dd.selectEl;
 			selectEl.dataset.role = "llm-default-select";

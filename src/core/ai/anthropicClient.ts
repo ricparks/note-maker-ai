@@ -29,7 +29,6 @@
  */
 import { requestUrl, RequestUrlParam } from 'obsidian';
 import { AiResult, AnthropicParams } from './types';
-import { isTimeoutError } from './fetchWithTimeout';
 
 const ANTHROPIC_ENDPOINT = 'https://api.anthropic.com/v1/messages';
 const DEFAULT_ANTHROPIC_VERSION = '2023-06-01';
@@ -202,7 +201,7 @@ export async function callAnthropicClient(params: AnthropicParams): Promise<AiRe
     return { ok: true, data: parsedResult.data, raw: parsed, model };
   } catch (cause) {
     const causeError = cause instanceof Error ? cause : null;
-    if (isTimeoutError(cause) || causeError?.name === 'AbortError') {
+    if (causeError?.name === 'AbortError') {
       const timeoutSec = Math.round(TIMEOUT_MS / 1000);
       return {
         ok: false,

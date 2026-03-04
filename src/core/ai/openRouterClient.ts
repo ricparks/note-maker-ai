@@ -27,8 +27,8 @@
  *
  * =========================================================================
  */
+import { requestUrl, RequestUrlParam } from 'obsidian';
 import { AiResult, OpenRouterParams } from './types';
-import { fetchWithTimeout, isTimeoutError } from './fetchWithTimeout';
 
 const OPENROUTER_ENDPOINT = 'https://openrouter.ai/api/v1/chat/completions';
 const TIMEOUT_MS = 180000; // 3 minutes
@@ -121,15 +121,30 @@ export async function callOpenRouterClient(params: OpenRouterParams): Promise<Ai
   };
 
   try {
-    const response = await fetchWithTimeout(OPENROUTER_ENDPOINT, {
+    const requestParams: RequestUrlParam = {
+      url: OPENROUTER_ENDPOINT,
       method: 'POST',
       headers,
       body: JSON.stringify(body),
-    }, TIMEOUT_MS);
+      throw: false,
+    };
 
-    if (!response.ok) {
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      setTimeout(() => {
+        const error = new Error('Request timed out');
+        error.name = 'AbortError';
+        reject(error);
+      }, TIMEOUT_MS);
+    });
+
+    const response = await Promise.race([
+      requestUrl(requestParams),
+      timeoutPromise,
+    ]);
+
+    if (response.status >= 400) {
       let errorPayload: OpenRouterErrorPayload | null = null;
-      try { errorPayload = await response.json() as OpenRouterErrorPayload; } catch { /* ignore parse errors */ }
+      try { errorPayload = response.json as OpenRouterErrorPayload; } catch { /* ignore parse errors */ }
       return {
         ok: false,
         error: errorPayload?.error ?? `OpenRouter API HTTP ${response.status}`,
@@ -140,7 +155,7 @@ export async function callOpenRouterClient(params: OpenRouterParams): Promise<Ai
     }
 
     let parsed: OpenRouterResponse;
-    try { parsed = await response.json() as OpenRouterResponse; } catch (cause) {
+    try { parsed = response.json as OpenRouterResponse; } catch (cause) {
       return {
         ok: false,
         error: 'Failed to parse OpenRouter JSON body',
@@ -181,7 +196,8 @@ export async function callOpenRouterClient(params: OpenRouterParams): Promise<Ai
 
     return { ok: true, data: parsedResult.data, raw: parsed, model };
   } catch (cause) {
-    if (isTimeoutError(cause)) {
+    const causeError = cause instanceof Error ? cause : null;
+    if (causeError?.name === 'AbortError') {
       const timeoutSec = Math.round(TIMEOUT_MS / 1000);
       return {
         ok: false,

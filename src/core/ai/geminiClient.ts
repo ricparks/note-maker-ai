@@ -27,8 +27,8 @@
  *
  * =========================================================================
  */
+import { requestUrl, RequestUrlParam } from 'obsidian';
 import { AiResult, GeminiParams } from './types';
-import { fetchWithTimeout, isTimeoutError } from './fetchWithTimeout';
 
 interface GeminiErrorPayload {
   error?: { message?: string };
@@ -73,15 +73,30 @@ export async function callGeminiClient(params: GeminiParams): Promise<AiResult> 
   };
 
   try {
-    const response = await fetchWithTimeout(url, {
+    const requestParams: RequestUrlParam = {
+      url,
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(requestBody)
-    }, TIMEOUT_MS);
+      body: JSON.stringify(requestBody),
+      throw: false,
+    };
 
-    if (!response.ok) {
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      setTimeout(() => {
+        const error = new Error('Request timed out');
+        error.name = 'AbortError';
+        reject(error);
+      }, TIMEOUT_MS);
+    });
+
+    const response = await Promise.race([
+      requestUrl(requestParams),
+      timeoutPromise,
+    ]);
+
+    if (response.status >= 400) {
       let errorPayload: GeminiErrorPayload | null = null;
-      try { errorPayload = await response.json() as GeminiErrorPayload; } catch { /* ignore parse errors */ }
+      try { errorPayload = response.json as GeminiErrorPayload; } catch { /* ignore parse errors */ }
       return {
         ok: false,
         error: errorPayload?.error?.message ?? `Gemini API HTTP ${response.status}`,
@@ -92,7 +107,7 @@ export async function callGeminiClient(params: GeminiParams): Promise<AiResult> 
     }
 
     let outer: GeminiResponse;
-    try { outer = await response.json() as GeminiResponse; } catch (e) {
+    try { outer = response.json as GeminiResponse; } catch (e) {
       return { ok: false, error: 'Failed to parse Gemini JSON body', errorType: 'parse', cause: e, model };
     }
 
@@ -108,7 +123,8 @@ export async function callGeminiClient(params: GeminiParams): Promise<AiResult> 
       return { ok: false, error: 'Gemini inner JSON parse error', errorType: 'parse', raw: { outer, text }, cause: e, model };
     }
   } catch (e) {
-    if (isTimeoutError(e)) {
+    const causeError = e instanceof Error ? e : null;
+    if (causeError?.name === 'AbortError') {
       const timeoutSec = Math.round(TIMEOUT_MS / 1000);
       return { ok: false, error: `Gemini request timed out after ${timeoutSec}s`, errorType: 'network', cause: e, model };
     }
