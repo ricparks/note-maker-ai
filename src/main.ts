@@ -156,7 +156,7 @@ export default class NoteMakerAI extends Plugin {
         
         if (subjects.length === 0) {
             Logger.info("[NoteMakerAI] No subjects configured.");
-            new Notice("No subject definition file configured. Open NoteMakerAI settings to configure one.");
+            new Notice("No subject definition file configured. Open settings to configure one.");
             return;
         }
 

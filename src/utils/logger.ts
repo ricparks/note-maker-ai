@@ -52,7 +52,7 @@ export class Logger {
 
     static info(message?: unknown, ...optionalParams: unknown[]) {
         if (this.currentLevel <= LEVELS.info) {
-            console.log(message, ...optionalParams);
+            console.debug(message, ...optionalParams);
         }
     }
 

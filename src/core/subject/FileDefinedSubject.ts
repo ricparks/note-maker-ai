@@ -119,7 +119,7 @@ ${trailing_prompt || ''}`;
   /**
    * Dynamic prompt generation (allows for context additions like Redo).
    */
-  async getPrompt(context: SubjectPromptContext): Promise<string> {
+  getPrompt(context: SubjectPromptContext): string {
     let finalPrompt = this.prompt;
 
     // Inject EXIF Metadata if available

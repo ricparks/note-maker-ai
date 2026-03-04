@@ -142,7 +142,7 @@ export class NoteMakerCore {
 	async processSelection(explicitSubject?: import("./subject").ActiveSubject): Promise<void> {
 		const subject = explicitSubject || this.firstSubject;
 		if (!subject) {
-			new Notice("No subject definition file configured. Open NoteMakerAI settings to configure one.");
+			new Notice("No subject definition file configured. Open settings to configure one.");
 			return;
 		}
 		

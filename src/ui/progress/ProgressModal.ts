@@ -39,7 +39,7 @@ export class ProgressModal extends Modal {
   }
 
   onOpen() {
-    this.titleEl.setText('NoteMakerAI processing');
+    this.titleEl.setText('Processing');
     this.render();
   }
 

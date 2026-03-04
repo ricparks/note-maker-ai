@@ -237,7 +237,7 @@ export class NoteMakerAISettingTab extends PluginSettingTab {
 			return this.plugin.settings.llms;
 		};
 
-		new Setting(containerEl).setName("AI Model").setHeading();
+		new Setting(containerEl).setName("AI model").setHeading();
 		containerEl.createEl("hr");
 		const llmWrap = containerEl.createEl("div", {
 			cls: "notemaker-llm-rows",
