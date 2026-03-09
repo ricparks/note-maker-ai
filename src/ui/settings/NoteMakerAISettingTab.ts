@@ -37,25 +37,22 @@ import { FolderSuggest } from "../components/FolderSuggest";
 import { confirm as confirmModal } from "../confirm/ConfirmModal";
 
 const OPENAI_MODEL_OPTIONS: Array<{ value: string; label: string }> = [
-	{ value: "gpt-5.1", label: "GPT-5.1" },
-	{ value: "gpt-5-mini", label: "GPT-5 Mini" },
+	{ value: "gpt-5.1", label: "gpt-5.1" },
 ];
 
 const GEMINI_MODEL_OPTIONS: Array<{ value: string; label: string }> = [
 	{ value: "gemini-3.1-pro-preview", label: "Gemini 3.1 Pro" },
-	{ value: "gemini-3-flash-preview", label: "Gemini 3 Flash" }
+	{ value: "gemini-3-flash-preview", label: "Gemini 3 Flash" },
 ];
 
 const OPENROUTER_MODEL_OPTIONS: Array<{ value: string; label: string }> = [
-	{ value: "anthropic/claude-haiku-4.5", label: "Claude Haiku 4.5" },
-	{ value: "anthropic/claude-sonnet-4.5", label: "Claude Sonnet 4.5" },
-	{ value: "anthropic/claude-opus-4.1", label: "Claude Opus 4.1" },
 	{ value: "x-ai/grok-4", label: "Grok 4" },
 	{ value: "meta-llama/llama-4-maverick", label: "Llama 4 Maverick" },
 ];
 
 const ANTHROPIC_MODEL_OPTIONS: Array<{ value: string; label: string }> = [
-	{ value: "claude-opus-4-5-20251101", label: "Claude Opus 4.5" },
+	{ value: "claude-opus-4-6", label: "claude-opus-4-6" },
+	{ value: "claude-sonnet-4-6", label: "claude-sonnet-4-6" },
 ];
 
 const MODEL_OPTION_MAP: Record<LlmVendor, Array<{ value: string; label: string }>> = {

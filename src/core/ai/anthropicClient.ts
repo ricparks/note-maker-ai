@@ -112,10 +112,6 @@ export async function callAnthropicClient(params: AnthropicParams): Promise<AiRe
           },
         ],
       },
-      {
-        role: 'assistant',
-        content: [{ type: 'text', text: '{' }], // Prefill to encourage JSON output
-      },
     ],
   };
 
@@ -183,16 +179,14 @@ export async function callAnthropicClient(params: AnthropicParams): Promise<AiRe
       };
     }
 
-    // Prepend the '{' we used as prefill since it's not in the response
-    const fullJson = '{' + text;
-    const parsedResult = parseAnthropicJson(fullJson);
+    const parsedResult = parseAnthropicJson(text);
 
     if (!parsedResult.ok) {
       return {
         ok: false,
         error: 'Anthropic inner JSON parse error',
         errorType: 'parse',
-        raw: { parsed, text: fullJson, candidates: parsedResult.raw.candidates },
+        raw: { parsed, text, candidates: parsedResult.raw.candidates },
         cause: parsedResult.error,
         model,
       };
