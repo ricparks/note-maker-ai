@@ -202,6 +202,8 @@ ${trailing_prompt || ''}`;
       if (key === 'title') return info.title;
       if (key === 'producer') return info.producer || '';
       if (key === 'sdf_version') return this.definition.sdf_version || '';
+      // Special case: {{date_created}} — resolves to today's date (YYYY-MM-DD)
+      if (key === 'date_created') return new Date().toISOString().slice(0, 10);
 
       return ''; // Fallback to empty
     });

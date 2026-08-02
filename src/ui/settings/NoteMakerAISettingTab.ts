@@ -37,7 +37,8 @@ import { FolderSuggest } from "../components/FolderSuggest";
 import { confirm as confirmModal } from "../confirm/ConfirmModal";
 
 const OPENAI_MODEL_OPTIONS: Array<{ value: string; label: string }> = [
-	{ value: "gpt-5.1", label: "gpt-5.1" },
+	{ value: "gpt-5.6-sol", label: "gpt-5.6-sol" },
+	{ value: "gpt-5.6-terra", label: "gpt-5.6-terra" },
 ];
 
 const GEMINI_MODEL_OPTIONS: Array<{ value: string; label: string }> = [
@@ -46,13 +47,13 @@ const GEMINI_MODEL_OPTIONS: Array<{ value: string; label: string }> = [
 ];
 
 const OPENROUTER_MODEL_OPTIONS: Array<{ value: string; label: string }> = [
-	{ value: "x-ai/grok-4", label: "Grok 4" },
-	{ value: "meta-llama/llama-4-maverick", label: "Llama 4 Maverick" },
+	{ value: "x-ai/grok-4.5", label: "Grok 4.5" },
+	{ value: "moonshotai/kimi-k3", label: "Kimi 3" }
 ];
 
 const ANTHROPIC_MODEL_OPTIONS: Array<{ value: string; label: string }> = [
-	{ value: "claude-opus-4-6", label: "claude-opus-4-6" },
-	{ value: "claude-sonnet-4-6", label: "claude-sonnet-4-6" },
+	{ value: "claude-fable-5", label: "claude-fable-5" },
+	{ value: "claude-opus-5", label: "claude-opus-5" },
 ];
 
 const MODEL_OPTION_MAP: Record<LlmVendor, Array<{ value: string; label: string }>> = {
@@ -283,10 +284,10 @@ export class NoteMakerAISettingTab extends PluginSettingTab {
 			const llms = ensureLlmArray();
 			const existing = new Set(llms.map((entry) => entry.label.toLowerCase()));
 			let counter = llms.length + 1;
-			while (existing.has(`llm${counter}`)) {
+			while (existing.has(`LLM${counter}`)) {
 				counter++;
 			}
-			return `llm${counter}`.slice(0, 12);
+			return `LLM${counter}`.slice(0, 12);
 		};
 
 		const renderLlmRows = () => {
@@ -302,16 +303,16 @@ export class NoteMakerAISettingTab extends PluginSettingTab {
 				const row = llmWrap.createEl("div");
 
 				const labelInput = row.createEl("input", { type: "text", cls: "notemaker-input-label" });
-				labelInput.placeholder = "Label (max 12)";
+				labelInput.placeholder = "Label (max 32)";
 				labelInput.value = entry.label;
-				labelInput.maxLength = 12;
+				labelInput.maxLength = 32;
 				labelInput.onchange = () => {
 					void (async () => {
 						const val = (labelInput.value || "").trim();
-						const valid = /^[A-Za-z0-9_]{1,12}$/.test(val);
+						const valid = /^[\x20-\x7E]{1,32}$/.test(val);
 						if (!valid) {
 							new Notice(
-								"Label must be 1–12 characters (letters, numbers, or underscore)."
+								"Label must be 1–32 printable characters."
 							);
 							labelInput.value = entry.label;
 							return;
