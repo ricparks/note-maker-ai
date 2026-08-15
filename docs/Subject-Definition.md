@@ -179,6 +179,7 @@ You can use these placeholders in `naming` patterns, `default` property values, 
 | :--- | :--- | :--- |
 | `{{original_image}}` | Default | Resolves to a wiki-link of the original image (e.g., `[[IMG_1234.jpg]]`). |
 | `{{sdf_version}}` | Default | Resolves to the version string defined in your file. |
+| `{{date_created}}` | Default | Resolves to today's date in `YYYY-MM-DD` format (e.g., `2026-08-15`). Useful for auto-stamping a note's creation date. |
 | `{{my_notes}}` | **Section Instruction** | Designates the section as **User Notes**. Content in this section is preserved during Redo and excluded from AI generation. |
 
 ---

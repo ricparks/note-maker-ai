@@ -42,8 +42,8 @@ const OPENAI_MODEL_OPTIONS: Array<{ value: string; label: string }> = [
 ];
 
 const GEMINI_MODEL_OPTIONS: Array<{ value: string; label: string }> = [
-	{ value: "gemini-3.1-pro-preview", label: "Gemini 3.1 Pro" },
-	{ value: "gemini-3-flash-preview", label: "Gemini 3 Flash" },
+	{ value: "gemini-3.1-pro-preview", label: "gemini-3.1-pro-preview" },
+	{ value: "gemini-3.7-flash", label: "gemini-3.7-flash" },
 ];
 
 const OPENROUTER_MODEL_OPTIONS: Array<{ value: string; label: string }> = [
